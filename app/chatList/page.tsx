@@ -1,8 +1,6 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
-import { FaWifi } from "react-icons/fa";
-import { FaBatteryFull } from "react-icons/fa";
 import { FaRegUser } from "react-icons/fa";
 import { FaRegComment } from "react-icons/fa";
 import { FaEllipsisH } from "react-icons/fa";
@@ -48,7 +46,7 @@ export default function chatList() {
                 />
               </div>
               <div className="w-full text-sm leading-6">
-                <a href="#" className="font-semibold text-slate-900">
+                <a href="/chatRoom" className="font-semibold text-slate-900">
                   <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
                   나는 고양이
                 </a>
@@ -128,16 +126,11 @@ export default function chatList() {
         </ul>
       </div>
       {isDropdownOpen && (
-        <div className="dropdown absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-[999]">
+        <div className="dropdown absolute bottom-14 right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-[999]">
           <ul className="dropdown__menu">
             <li className="dropdown__item">
               <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-100">
                 로그아웃
-              </a>
-            </li>
-            <li className="dropdown__item">
-              <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-100">
-                테스트
               </a>
             </li>
           </ul>
@@ -146,12 +139,12 @@ export default function chatList() {
       <nav className="nav fixed bottom-0 w-full bg-gray-50 py-5 px-10 border-t border-gray-200">
         <ul className="nav__list flex justify-between">
           <li className="nav__btn">
-            <a className="nav__link" href="friends.html">
+            <a className="nav__link" href="/myPage">
               <FaRegUser size={24} />
             </a>
           </li>
           <li className="nav__btn">
-            <a className="nav__link" href="chats.html">
+            <a className="nav__link" href="/chatList">
               <FaRegComment size={24} />
             </a>
           </li>

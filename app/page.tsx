@@ -31,20 +31,20 @@ export default function Login() {
           name="username"
           type="text"
           placeholder="Enter your ID"
-          className="border p-2 mb-2 w-full"
+          className="border p-2 mb-2 w-full rounded-md"
           autoComplete="off"
         />
         <input
           name="password"
           type="password"
           placeholder="Password"
-          className="border p-2 mb-2 w-full"
+          className="border p-2 mb-2 w-full rounded-md "
           autoComplete="off"
         />
         <input
           type="submit"
           value="Log In"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 cursor-pointer w-full"
+          className="bg-blue-700 mb-3 rounded-md text-white px-4 py-2 rounded hover:bg-blue-600 cursor-pointer w-full"
         />
         <div className="flex justify-end">
           <a href="/signUp" className="text-blue-500 ml-auto">

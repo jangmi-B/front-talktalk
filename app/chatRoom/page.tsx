@@ -6,31 +6,34 @@ import { FaSearch } from "react-icons/fa";
 import { FaBars } from "react-icons/fa";
 import { FaRegPlusSquare } from "react-icons/fa";
 import { FaArrowUp } from "react-icons/fa";
+import { FaSignOutAlt } from "react-icons/fa";
 
 export default function chatRoom() {
   const isSidebarOpen = useRef(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const arrowRef = useRef<HTMLSpanElement>(null);
 
+  const addFriend = () => {
+    if (window.confirm("친구를 초대하시겠습니까?")) {
+      console.log("초대됨");
+    }
+  };
+
+  const toggleDropdown = () => {
+    const submenu = submenuRef.current;
+    const arrow = arrowRef.current;
+    if (submenu && arrow) {
+      submenu.classList.toggle("hidden");
+      arrow.classList.toggle("rotate-0");
+    }
+  };
   const toggleSidebar = () => {
     isSidebarOpen.current = !isSidebarOpen.current;
   };
 
-  useEffect(() => {
-    const toggleDropdown = () => {
-      const submenu = submenuRef.current;
-      const arrow = arrowRef.current;
-      if (submenu && arrow) {
-        submenu.classList.toggle("hidden");
-        arrow.classList.toggle("rotate-0");
-      }
-    };
-
-    toggleDropdown();
-  }, []);
-
   const openSidebar = () => {
-    const sidebar = document.querySelector(".sidebar");
+    const sidebar = sidebarRef.current;
     if (sidebar) {
       sidebar.classList.toggle("hidden");
     }
@@ -72,10 +75,10 @@ export default function chatRoom() {
             className="object-cover w-12 h-12 rounded-lg mr-2.5"
           />
           <div className="message-row__content">
-            <span className="message-row__author">Anonymous</span>
+            <span className="message-row__author">나는 고양이</span>
             <div className="message-row__info flex mb-1 items-end">
               <span className="message-row__bubble bg-white px-4 py-3 rounded-xl text-lg mr-2">
-                Hi!
+                집에갈래!!
               </span>
               <span className="message-row__time opacity-75 text-sm">21:27</span>
             </div>
@@ -86,7 +89,7 @@ export default function chatRoom() {
             <div className="message-row__info flex mb-1 items-end justify-end">
               <span className="message-row__time opacity-75 text-sm">21:27</span>
               <span className="message-row__bubble bg-yellow-500 px-4 py-3 rounded-xl text-lg ml-2 mr-0">
-                Hi! nice to meet you!
+                나도 그러고 싶다!!!!!!
               </span>
             </div>
           </div>
@@ -106,10 +109,12 @@ export default function chatRoom() {
         </div>
       </form>
 
+      {/* 사이드바 */}
       <div
         className={`sidebar fixed top-0 bottom-0 lg:left-0 p-2 w-[300px] overflow-y-auto text-center bg-gray-900 ${
-          isSidebarOpen ? "" : "hidden"
+          isSidebarOpen ? "hidden" : ""
         }`}
+        ref={sidebarRef}
       >
         <div className="text-gray-100 text-xl">
           <div className="p-2.5 mt-1 flex items-center">
@@ -155,28 +160,73 @@ export default function chatRoom() {
           </div>
         </div>
         <div className="my-2 bg-gray-600 h-[1px]"></div>
-        {/* <div className="my-4 bg-gray-600 h-[1px]"></div>
+        {/* <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
+          <span className="text-[15px] ml-4 text-gray-200 font-bold">멤버 초대하기</span>
+        </div> */}
+        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
+          <span className="text-[15px] ml-4 text-gray-200 font-bold flex items-center justify-center">
+            채팅방 나가기 <FaSignOutAlt className="ml-3" />
+          </span>
+          {/* <FaSignOutAlt /> */}
+        </div>
         <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
           <i className="bi bi-chat-left-text-fill"></i>
-          <div className="flex justify-between w-full items-center">
-            <span className="text-[15px] ml-4 text-gray-200 font-bold">Chatbox</span>
-            <span className="text-sm rotate-180" id="arrow" ref={arrowRef}>
+          <div className="flex justify-between w-full items-center" onClick={toggleDropdown}>
+            <span className="text-[15px] ml-4 text-gray-200 font-bold">멤버 초대하기</span>
+            <span className="text-sm rotate-180" ref={arrowRef}>
               <i className="bi bi-chevron-down"></i>
             </span>
           </div>
         </div>
         <div
-          className="text-left text-sm mt-2 w-4/5 mx-auto text-gray-200 font-bold"
-          id="submenu"
+          className="text-left text-sm mt-2 w-4/5 mx-auto text-gray-200 font-bold hidden overflow-scroll h-[400px]"
           ref={submenuRef}
         >
-          <h1 className="cursor-pointer p-2 hover:bg-blue-600 rounded-md mt-1">Social</h1>
-          <h1 className="cursor-pointer p-2 hover:bg-blue-600 rounded-md mt-1">Personal</h1>
-          <h1 className="cursor-pointer p-2 hover:bg-blue-600 rounded-md mt-1">Friends</h1>
-        </div> */}
-        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
-          <i className="bi bi-box-arrow-in-right"></i>
-          <span className="text-[15px] ml-4 text-gray-200 font-bold">채팅방 나가기</span>
+          <div className="flex items-center mb-3">
+            <Image
+              src={"/images/angry.jpg"}
+              alt=""
+              width={50}
+              height={50}
+              className="object-cover w-12 h-12 rounded-lg mr-2.5"
+            />
+            <h1
+              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600  rounded-md mt-1"
+              onClick={addFriend}
+            >
+              사람111111111
+            </h1>
+          </div>
+          <div className="flex items-center mb-3">
+            <Image
+              src={"/images/angry.jpg"}
+              alt=""
+              width={50}
+              height={50}
+              className="object-cover w-12 h-12 rounded-lg mr-2.5"
+            />
+            <h1
+              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600  rounded-md mt-1"
+              onClick={addFriend}
+            >
+              사람2222222
+            </h1>
+          </div>
+          <div className="flex items-center mb-3">
+            <Image
+              src={"/images/angry.jpg"}
+              alt=""
+              width={50}
+              height={50}
+              className="object-cover w-12 h-12 rounded-lg mr-2.5"
+            />
+            <h1
+              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600  rounded-md mt-1"
+              onClick={addFriend}
+            >
+              사람33333
+            </h1>
+          </div>
         </div>
       </div>
     </div>
