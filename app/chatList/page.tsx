@@ -8,6 +8,12 @@ import { FaEllipsisH } from "react-icons/fa";
 export default function chatList() {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
+  const logOut = () => {
+    if (window.confirm("로그아웃 하시곘습니까?")) {
+      window.location.replace("/");
+    }
+  };
+
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
@@ -129,7 +135,7 @@ export default function chatList() {
         <div className="dropdown absolute bottom-14 right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-[999]">
           <ul className="dropdown__menu">
             <li className="dropdown__item">
-              <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-100">
+              <a onClick={logOut} className="block px-4 py-2 text-gray-800 hover:bg-gray-100">
                 로그아웃
               </a>
             </li>

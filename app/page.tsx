@@ -1,38 +1,39 @@
+"use client";
 import Image from "next/image";
-import { FaWifi } from "react-icons/fa";
-import { FaBatteryFull } from "react-icons/fa";
+import Link from "next/link";
+import { useRef } from "react";
 
 export default function Login() {
+  const idRef = useRef<HTMLInputElement>(null);
+  const pwdRef = useRef<HTMLInputElement>(null);
+
+  const logIn = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const idValue = idRef.current?.value;
+    const pwdValue = pwdRef.current?.value;
+
+    if (idValue === "jangmi" && pwdValue === "123") {
+      window.location.replace("/chatList");
+    } else {
+      alert("아이디 혹은 비밀번호가 올바르지 않습니다.");
+    }
+  };
+
   return (
     <>
-      {/* <div id="chat-screen" className="bg-slate-100">
-        <div className="status-bar bg-white flex justify-between items-center p-2">
-          <div className="status-bar__column flex items-center">
-            <span>Hello</span>
-            <FaWifi />
-          </div>
-          <div className="status-bar__column">
-            <span>18:43</span>
-          </div>
-          <div className="status-bar__column flex items-center">
-            <span>100%</span>
-            <FaBatteryFull />
-          </div>
-        </div>
-      </div> */}
-
       <header className="bg-white p-4 mt-32 text-center">
         <Image alt="logo" src={"/images/small_logo.png"} width={500} height={200} priority={true} />
         <h1 className="text-2xl font-bold">Welcome to TalkTalk</h1>
       </header>
 
-      <form action="friends.html" method="get" id="login-form" className="p-4">
+      <form method="post" id="login-form" className="p-4" onSubmit={logIn}>
         <input
           name="username"
           type="text"
           placeholder="Enter your ID"
           className="border p-2 mb-2 w-full rounded-md"
           autoComplete="off"
+          ref={idRef}
         />
         <input
           name="password"
@@ -40,6 +41,7 @@ export default function Login() {
           placeholder="Password"
           className="border p-2 mb-2 w-full rounded-md "
           autoComplete="off"
+          ref={pwdRef}
         />
         <input
           type="submit"
