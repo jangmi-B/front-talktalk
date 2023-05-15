@@ -1,23 +1,8 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
-import { FaRegUser } from "react-icons/fa";
-import { FaRegComment } from "react-icons/fa";
-import { FaEllipsisH } from "react-icons/fa";
+import BottomNav from "../component/bottomNav";
 
 export default function chatList() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-
-  const logOut = () => {
-    if (window.confirm("로그아웃 하시곘습니까?")) {
-      window.location.replace("/");
-    }
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
   return (
     <>
       <header className="screen-header flex justify-between px-6 items-center my-4">
@@ -40,7 +25,7 @@ export default function chatList() {
 
       <div className="main-ontents h-[600px]">
         <ul role="list" className="mx-auto max-w-md bg-white p-2 ">
-          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow">
+          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow bg-gray-50 mb-2">
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <Image
@@ -62,16 +47,9 @@ export default function chatList() {
             <a
               href="#"
               className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
-            >
-              <span className="font-semibold transition group-hover/edit:text-gray-700">Go</span>
-              <svg
-                className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              ></svg>
-            </a>
+            ></a>
           </li>
-          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow">
+          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow bg-gray-50 mb-2">
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <img
@@ -91,16 +69,9 @@ export default function chatList() {
             <a
               href="#"
               className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
-            >
-              <span className="font-semibold transition group-hover/edit:text-gray-700">Go</span>
-              <svg
-                className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              ></svg>
-            </a>
+            ></a>
           </li>
-          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow">
+          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow bg-gray-50 mb-2">
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <img
@@ -120,48 +91,12 @@ export default function chatList() {
             <a
               href="#"
               className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
-            >
-              <span className="font-semibold transition group-hover/edit:text-gray-700">Go</span>
-              <svg
-                className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              ></svg>
-            </a>
+            ></a>
           </li>
         </ul>
       </div>
-      {isDropdownOpen && (
-        <div className="dropdown absolute bottom-14 right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-[999]">
-          <ul className="dropdown__menu">
-            <li className="dropdown__item">
-              <a onClick={logOut} className="block px-4 py-2 text-gray-800 hover:bg-gray-100">
-                로그아웃
-              </a>
-            </li>
-          </ul>
-        </div>
-      )}
-      <nav className="nav fixed bottom-0 w-full bg-gray-50 py-5 px-10 border-t border-gray-200">
-        <ul className="nav__list flex justify-between">
-          <li className="nav__btn">
-            <a className="nav__link" href="/myPage">
-              <FaRegUser size={24} />
-            </a>
-          </li>
-          <li className="nav__btn">
-            <a className="nav__link" href="/chatList">
-              <FaRegComment size={24} />
-            </a>
-          </li>
 
-          <li className="nav__btn relative">
-            <button className="nav__link" onClick={toggleDropdown}>
-              <FaEllipsisH size={24} />
-            </button>
-          </li>
-        </ul>
-      </nav>
+      <BottomNav />
     </>
   );
 }

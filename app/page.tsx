@@ -1,22 +1,60 @@
 "use client";
+import axios from "axios";
 import Image from "next/image";
-import Link from "next/link";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { useCookies } from "react-cookie";
 
 export default function Login() {
   const idRef = useRef<HTMLInputElement>(null);
   const pwdRef = useRef<HTMLInputElement>(null);
+
+  // 쿠키.. 나중에 가져올때 쓰기
+  const [cookies] = useCookies(["adminer_version", "Authentication"]);
+
+  useEffect(() => {
+    // Authentication 쿠키 가져오기
+    const authenticationCookie = cookies["Authentication"];
+
+    if (authenticationCookie && authenticationCookie.accessToken) {
+      console.log(authenticationCookie.accessToken);
+
+      const getCookies = async () => {
+        try {
+          const token = `Bearer ${authenticationCookie.accessToken}`;
+          const response = await axios.post("/api/check", null, {
+            headers: {
+              Authorization: token,
+            },
+          });
+          console.log(response);
+        } catch (error) {
+          alert("아이디 또는 비밀번호를 확인해주세요.");
+        }
+      };
+      getCookies();
+    }
+  }, [cookies]);
 
   const logIn = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const idValue = idRef.current?.value;
     const pwdValue = pwdRef.current?.value;
 
-    if (idValue === "jangmi" && pwdValue === "123") {
-      window.location.replace("/chatList");
-    } else {
-      alert("아이디 혹은 비밀번호가 올바르지 않습니다.");
-    }
+    const userInfo = {
+      id: idValue,
+      password: pwdValue,
+    };
+    console.log(userInfo);
+
+    axios
+      .post("/api/logIn", userInfo)
+      .then((response) => {
+        console.log(response);
+        window.location.replace("/chatList");
+      })
+      .catch((error) => {
+        alert("아이디 또는 비밀번호를 확인해주세요.");
+      });
   };
 
   return (

@@ -141,14 +141,14 @@ export default function chatRoom() {
 
       {/* 사이드바 */}
       <div
-        className={`sidebar fixed top-0 bottom-0 lg:left-0 p-2 w-[300px] overflow-y-auto text-center bg-gray-900 ${
+        className={`sidebar fixed top-0 bottom-0 lg:left-0 p-2 w-[300px] overflow-y-auto text-center bg-white ${
           isSidebarOpen ? "hidden" : ""
         }`}
         ref={sidebarRef}
       >
         <div className="text-gray-100 text-xl">
           <div className="p-2.5 mt-1 flex items-center">
-            <h1 className="font-bold text-gray-200 text-[15px] ml-3">대화상대(3)</h1>
+            <h1 className="font-bold text-gray-500 text-[15px] ml-3">대화상대(3)</h1>
             <i className="bi bi-x cursor-pointer ml-28 lg:hidden" onClick={toggleSidebar}></i>
           </div>
           <div className="my-2 bg-gray-600 h-[1px]"></div>
@@ -165,13 +165,13 @@ export default function chatRoom() {
               />
             </div>
             <div className="w-full text-sm leading-6 flex items-center justify-center">
-              <a href="#" className="font-semibold text-slate-900 text-white">
+              <a href="#" className="font-semibold text-gray-500 ">
                 나는 고양이
               </a>
             </div>
           </div>
         </div>
-        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
+        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600">
           <div className="flex gap-4">
             <div className="flex-shrink-0">
               <Image
@@ -183,7 +183,7 @@ export default function chatRoom() {
               />
             </div>
             <div className="w-full text-sm leading-6 flex items-center justify-center">
-              <a href="#" className="font-semibold text-slate-900 text-white">
+              <a href="#" className="font-semibold text-gray-500">
                 너도 고양이?!
               </a>
             </div>
@@ -191,14 +191,14 @@ export default function chatRoom() {
         </div>
         <div className="my-2 bg-gray-600 h-[1px]"></div>
         <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
-          <span className="text-[15px] ml-4 text-gray-200 font-bold flex items-center justify-center">
+          <span className="text-[15px] ml-4 text-gray-500 font-bold flex items-center justify-center">
             채팅방 나가기 <FaSignOutAlt className="ml-3" />
           </span>
         </div>
         <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
           <i className="bi bi-chat-left-text-fill"></i>
           <div className="flex justify-between w-full items-center" onClick={toggleDropdown}>
-            <span className="text-[15px] ml-4 text-gray-200 font-bold">멤버 초대하기</span>
+            <span className="text-[15px] ml-4 text-gray-500 font-bold">멤버 초대하기</span>
             <span className="text-sm rotate-180" ref={arrowRef}>
               <i className="bi bi-chevron-down"></i>
             </span>
@@ -217,7 +217,7 @@ export default function chatRoom() {
               className="object-cover w-12 h-12 rounded-lg mr-2.5"
             />
             <h1
-              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600  rounded-md mt-1"
+              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600 text-gray-500 rounded-md mt-1"
               onClick={addFriend}
             >
               사람111111111
@@ -232,7 +232,7 @@ export default function chatRoom() {
               className="object-cover w-12 h-12 rounded-lg mr-2.5"
             />
             <h1
-              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600  rounded-md mt-1"
+              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600 text-gray-500 rounded-md mt-1"
               onClick={addFriend}
             >
               사람2222222
@@ -247,7 +247,7 @@ export default function chatRoom() {
               className="object-cover w-12 h-12 rounded-lg mr-2.5"
             />
             <h1
-              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600  rounded-md mt-1"
+              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600 text-gray-500 rounded-md mt-1"
               onClick={addFriend}
             >
               사람33333
