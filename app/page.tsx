@@ -28,7 +28,7 @@ export default function Login() {
           });
           console.log(response);
         } catch (error) {
-          alert("아이디 또는 비밀번호를 확인해주세요.");
+          alert("권한이 없는 사용자입니다.");
         }
       };
       getCookies();

@@ -1,17 +1,109 @@
 "use client";
 import Image from "next/image";
-import { useRef } from "react";
 import { FaChevronLeft } from "react-icons/fa";
 import { FaBars } from "react-icons/fa";
 import { FaRegPlusSquare } from "react-icons/fa";
 import { FaArrowUp } from "react-icons/fa";
 import { FaSignOutAlt } from "react-icons/fa";
+import { useState, useEffect, FormEvent, useRef } from "react";
+import * as mqtt from "mqtt";
+
+type publishedMessage = {
+  text: string;
+  isMine: boolean;
+  currTime: string;
+  clientId: string;
+};
+
+const getDay = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1; // 월은 0부터 시작하므로 1을 더해줍니다
+  const day = today.getDate();
+
+  const formattedDate = `${year}년 ${month}월 ${day}일`;
+  return formattedDate;
+};
+
+const getCurrentTime = () => {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes.toString();
+
+  const formattedTime = `${hours}:${formattedMinutes}`;
+  return formattedTime;
+};
 
 export default function chatRoom() {
   const isSidebarOpen = useRef(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const arrowRef = useRef<HTMLSpanElement>(null);
+
+  const [messages, setMessages] = useState<publishedMessage[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [client, setClient] = useState<mqtt.MqttClient | null>(null);
+
+  useEffect(() => {
+    const mqttClient = mqtt.connect("mqtt://localhost:9001");
+    console.log(mqttClient.connected);
+
+    mqttClient.on("error", (error) => {
+      console.log("Can't connect" + error);
+      mqttClient.end();
+    });
+
+    // MQTT 클라이언트 이벤트 핸들러 등록
+    mqttClient.on("connect", () => {
+      console.log("연결됨");
+      console.log("Connected to MQTT broker");
+      mqttClient.subscribe("chat");
+    });
+
+    mqttClient.on("message", (topic, message) => {
+      console.log("Received message:", message.toString());
+      console.log(mqttClient.options.clientId);
+      console.log(topic);
+      console.log(mqttClient);
+      // setMessages((prevMessages) => [...prevMessages, message.toString()]);
+
+      const parsedMessage = JSON.parse(message.toString());
+      const isMine = parsedMessage.clientId === mqttClient.options.clientId; // 클라이언트 식별자와 일치 여부 판별
+      const processedMessage: publishedMessage = {
+        text: parsedMessage.text,
+        isMine: isMine,
+        currTime: getCurrentTime(),
+        clientId: mqttClient.options.clientId || "",
+      };
+      console.log("Received message:", processedMessage);
+      console.log(processedMessage.isMine);
+      setMessages((prevMessages: publishedMessage[]) => [...prevMessages, processedMessage]);
+    });
+
+    setClient(mqttClient);
+
+    return () => {
+      // 컴포넌트 언마운트 시 MQTT 클라이언트 연결 해제
+      mqttClient.end();
+    };
+  }, []);
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    const input = inputRef.current?.value;
+    if (input) {
+      // MQTT 브로커로 메시지 발행
+      const publishedMessage = {
+        text: input,
+        isMine: true,
+        clientId: client!.options.clientId, // 클라이언트 식별자
+      };
+      client?.publish("chat", JSON.stringify(publishedMessage));
+      inputRef.current.value = "";
+      inputRef.current.focus();
+    }
+  };
 
   const addFriend = () => {
     if (window.confirm("친구를 초대하시겠습니까?")) {
@@ -61,78 +153,64 @@ export default function chatRoom() {
           </span>
         </div>
       </header>
-
       <main className="main-screen main-chat items-center px-2 h-[660px] overflow-scroll">
         <div className="chat__timestamp bg-slate-400 text-white rounded-full py-1 px-2 my-6 mx-8 text-center font-base">
-          Tuesday, June 30, 2020
+          {getDay()}
         </div>
-        <div className="message-row w-full flex mb-6">
-          <Image
-            src={"/images/example.jpeg"}
-            alt=""
-            width={50}
-            height={50}
-            className="object-cover w-12 h-12 rounded-lg mr-2.5"
-          />
-          <div className="message-row__content">
-            <span className="message-row__author">나는 고양이</span>
-            <div className="message-row__info flex mb-1 items-end">
-              <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
-                집에갈래!!
-              </span>
-              <span className="message-row__time opacity-75 text-sm">21:27</span>
-            </div>
-          </div>
-        </div>
-        <div className="message-row message-row-own justify-end">
-          <div className="message-row__content">
-            <div className="message-row__info flex mb-1 items-end justify-end">
-              <span className="message-row__time opacity-75 text-sm">21:27</span>
-              <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
-                나도 그러고 싶다!!!!!!
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="message-row w-full flex mb-6">
-          <Image
-            src={"/images/example.jpeg"}
-            alt=""
-            width={50}
-            height={50}
-            className="object-cover w-12 h-12 rounded-lg mr-2.5"
-          />
-          <div className="message-row__content">
-            <span className="message-row__author">나는 고양이</span>
-            <div className="message-row__info flex mb-1 items-end">
-              <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
-                집에갈래!!
-              </span>
-              <span className="message-row__time opacity-75 text-sm">21:27</span>
-            </div>
-          </div>
-        </div>
-        <div className="message-row message-row-own justify-end">
-          <div className="message-row__content">
-            <div className="message-row__info flex mb-1 items-end justify-end">
-              <span className="message-row__time opacity-75 text-sm">21:27</span>
-              <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
-                나도 그러고 싶다!!!!!!
-              </span>
-            </div>
-          </div>
-        </div>
+        {messages.map((message, index) => {
+          if (message.isMine) {
+            return (
+              <div key={index} className="message-row message-row-own justify-end">
+                <div className="message-row__content">
+                  <div className="message-row__info flex mb-1 items-end justify-end">
+                    <span className="message-row__time opacity-75 text-sm">{message.currTime}</span>
+                    <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
+                      {message.text}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          } else {
+            return (
+              <div key={index} className="message-row w-full flex mb-6">
+                <Image
+                  src={"/images/example.jpeg"}
+                  alt=""
+                  width={50}
+                  height={50}
+                  className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                />
+                <div className="message-row__content">
+                  <span className="message-row__author">나는 고양이</span>
+                  <div className="message-row__info flex mb-1 items-end">
+                    <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
+                      {message.text}
+                    </span>
+                    <span className="message-row__time opacity-75 text-sm">{message.currTime}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+        })}
       </main>
-
-      <form className="reply bg-white fixed flex w-full justify-between px-1 py-6 box-border items-center">
+      <form
+        onSubmit={handleSubmit}
+        className="reply bg-white fixed flex w-full justify-between px-1 py-6 box-border items-center"
+      >
         <div className="reply__column flex items-center justify-center w-1/6">
           <button>
             <FaRegPlusSquare size={24} />
           </button>
         </div>
         <div className="reply__column flex items-center w-11/12 justify-center">
-          <input type="text" placeholder="write a message" className="border p-2 w-full" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="write a message"
+            className="border p-2 w-full"
+          />
           <button className="bg-yellow-500 border-none w-10 h-10 text-center">
             <FaArrowUp className="m-auto" />
           </button>
