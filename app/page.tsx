@@ -8,33 +8,6 @@ export default function Login() {
   const idRef = useRef<HTMLInputElement>(null);
   const pwdRef = useRef<HTMLInputElement>(null);
 
-  // 쿠키.. 나중에 가져올때 쓰기
-  const [cookies] = useCookies(["adminer_version", "Authentication"]);
-
-  useEffect(() => {
-    // Authentication 쿠키 가져오기
-    const authenticationCookie = cookies["Authentication"];
-
-    if (authenticationCookie && authenticationCookie.accessToken) {
-      console.log(authenticationCookie.accessToken);
-
-      const getCookies = async () => {
-        try {
-          const token = `Bearer ${authenticationCookie.accessToken}`;
-          const response = await axios.post("/api/check", null, {
-            headers: {
-              Authorization: token,
-            },
-          });
-          console.log(response);
-        } catch (error) {
-          alert("권한이 없는 사용자입니다.");
-        }
-      };
-      getCookies();
-    }
-  }, [cookies]);
-
   const logIn = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const idValue = idRef.current?.value;

@@ -7,13 +7,8 @@ import { FaArrowUp } from "react-icons/fa";
 import { FaSignOutAlt } from "react-icons/fa";
 import { useState, useEffect, FormEvent, useRef } from "react";
 import * as mqtt from "mqtt";
-
-type publishedMessage = {
-  text: string;
-  isMine: boolean;
-  currTime: string;
-  clientId: string;
-};
+import axios from "axios";
+import { publishedMessage } from "../../../component/types";
 
 const getDay = () => {
   const today = new Date();
@@ -26,13 +21,20 @@ const getDay = () => {
 };
 
 const getCurrentTime = () => {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes.toString();
+  const chatTime = new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return chatTime;
+};
 
-  const formattedTime = `${hours}:${formattedMinutes}`;
-  return formattedTime;
+const getChatDate = (createAt: string) => {
+  const chatDate = new Date(createAt).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  return chatDate;
 };
 
 export default function chatRoom() {
@@ -40,14 +42,62 @@ export default function chatRoom() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const arrowRef = useRef<HTMLSpanElement>(null);
+  const chatListRef = useRef<HTMLDivElement>(null);
+  const chatDayRef = useRef<HTMLInputElement>(null);
+  const isSameDayRef = useRef<HTMLInputElement>(null);
 
   const [messages, setMessages] = useState<publishedMessage[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
 
+  const [chatList, setChatList] = useState<publishedMessage[]>([]);
+  const [userIdx, setUserIdx] = useState(0);
+
+  const getChatList = async (userIdx: number, roomIdx: number) => {
+    const data = {
+      userIdx: userIdx,
+      roomIdx: roomIdx,
+    };
+    try {
+      const response = await axios.post(`/api/chat/list/`, data);
+      console.log(response.data);
+      if (response.data) {
+        setChatList(response.data);
+      }
+    } catch (error) {
+      alert("챗리스트에러 " + error);
+    }
+
+    if (chatListRef.current) {
+      const chatListElement = chatListRef.current;
+      chatListElement.scrollTop = chatListElement.scrollHeight;
+    }
+  };
+
   useEffect(() => {
+    // chatListRef.current이 변경될 때마다 실행됩니다.
+    if (chatListRef.current) {
+      const chatListElement = chatListRef.current;
+      chatListElement.scrollTop = chatListElement.scrollHeight;
+
+      const isScrolledToBottom =
+        chatListElement.scrollHeight - chatListElement.clientHeight <=
+        chatListElement.scrollTop + 1;
+
+      // chatListElement의 스크롤을 맨 아래로 이동시킵니다.
+      if (isScrolledToBottom) {
+        chatListElement.scrollTop = chatListElement.scrollHeight;
+      }
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    const userIdx = parseInt(window.location.pathname.split("/")[2], 10);
+    const roomIdx = parseInt(window.location.pathname.split("/")[3], 10);
+
+    setUserIdx(userIdx);
     const mqttClient = mqtt.connect("mqtt://localhost:9001");
-    console.log(mqttClient.connected);
+    getChatList(userIdx, roomIdx);
 
     mqttClient.on("error", (error) => {
       console.log("Can't connect" + error);
@@ -66,19 +116,28 @@ export default function chatRoom() {
       console.log(mqttClient.options.clientId);
       console.log(topic);
       console.log(mqttClient);
-      // setMessages((prevMessages) => [...prevMessages, message.toString()]);
 
       const parsedMessage = JSON.parse(message.toString());
       const isMine = parsedMessage.clientId === mqttClient.options.clientId; // 클라이언트 식별자와 일치 여부 판별
       const processedMessage: publishedMessage = {
+        userIdx: userIdx,
+        roomIdx: roomIdx,
         text: parsedMessage.text,
         isMine: isMine,
-        currTime: getCurrentTime(),
+        createAt: getCurrentTime(),
         clientId: mqttClient.options.clientId || "",
       };
+
       console.log("Received message:", processedMessage);
-      console.log(processedMessage.isMine);
       setMessages((prevMessages: publishedMessage[]) => [...prevMessages, processedMessage]);
+
+      if (processedMessage.userIdx === userIdx) {
+        if (isMine) {
+          saveChat(processedMessage);
+        }
+      } else {
+        saveChat(processedMessage);
+      }
     });
 
     setClient(mqttClient);
@@ -88,6 +147,19 @@ export default function chatRoom() {
       mqttClient.end();
     };
   }, []);
+
+  const saveChat = async (processedMessage: publishedMessage) => {
+    try {
+      const response = await axios.post(`/api/chat/saveChat/`, processedMessage);
+      if (response.data) {
+        // const roomIdxList = response.data.map((room: ChatMember) => room.roomIdx);
+        // const chatRoomResponse = await axios.get(`/api/chat/getChatList/`, roomIdxList);
+        // setRooms(chatRoomResponse.data);
+      }
+    } catch (error) {
+      alert(error);
+    }
+  };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -100,6 +172,7 @@ export default function chatRoom() {
         clientId: client!.options.clientId, // 클라이언트 식별자
       };
       client?.publish("chat", JSON.stringify(publishedMessage));
+
       inputRef.current.value = "";
       inputRef.current.focus();
     }
@@ -145,55 +218,134 @@ export default function chatRoom() {
           </h1>
         </div>
         <div className="alt-header__column ml-auto flex items-center">
-          {/* <span className="alt-header__column-icon mr-4">
-            <FaSearch />
-          </span> */}
           <span className="alt-header__column-icon" onClick={openSidebar}>
             <FaBars />
           </span>
         </div>
       </header>
-      <main className="main-screen main-chat items-center px-2 h-[660px] overflow-scroll">
-        <div className="chat__timestamp bg-slate-400 text-white rounded-full py-1 px-2 my-6 mx-8 text-center font-base">
-          {getDay()}
+      <main
+        ref={chatListRef}
+        className="main-screen main-chat items-center px-2 h-[660px] overflow-scroll"
+      >
+        <input type="hidden" ref={chatDayRef} />
+        <input type="hidden" ref={isSameDayRef} />
+        <div>
+          {chatList.map((chat, index) => {
+            let chatDate = getChatDate(chat.createAt);
+
+            if (!chatDayRef.current?.value || chatDayRef.current?.value !== chatDate) {
+              chatDayRef.current?.setAttribute("value", chatDate);
+              isSameDayRef.current?.setAttribute("value", "false");
+            } else {
+              isSameDayRef.current?.setAttribute("value", "true");
+            }
+            const chatTime = new Date(chat.createAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            if (chat.userIdx === userIdx) {
+              return (
+                <div key={index} className="message-row message-row-own justify-end">
+                  {isSameDayRef.current?.value === "false" ? (
+                    <div className="chat__timestamp bg-slate-300 text-white rounded-full py-1 px-2 my-8 mx-8 text-center font-base">
+                      {chatDate}
+                    </div>
+                  ) : (
+                    ""
+                  )}
+
+                  <div className="message-row__content">
+                    <div className="message-row__info flex mb-2 items-end justify-end">
+                      <span className="message-row__time opacity-75 text-sm">{chatTime}</span>
+                      <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
+                        {chat.text}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            } else {
+              return (
+                <div key={index}>
+                  {isSameDayRef.current?.value === "false" ? (
+                    <div className="chat__timestamp bg-slate-300 text-white rounded-full py-1 px-2 my-8 mx-8 text-center font-base">
+                      {chatDate}
+                    </div>
+                  ) : (
+                    ""
+                  )}
+                  <div className="message-row w-full flex mt-6 mb-3">
+                    <Image
+                      src={"/images/example.jpeg"}
+                      alt=""
+                      width={50}
+                      height={50}
+                      className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                    />
+                    <div className="message-row__content">
+                      <span className="message-row__author">나는 고양이</span>
+                      <div className="message-row__info flex mb-1 items-end">
+                        <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
+                          {chat.text}
+                        </span>
+                        <span className="message-row__time opacity-75 text-sm">{chatTime}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+          })}
+          {chatDayRef.current?.value !== getDay() ? (
+            <div className="chat__timestamp bg-slate-300 text-white rounded-full py-1 px-2 my-6 mx-8 text-center font-base">
+              {getDay()}
+            </div>
+          ) : (
+            ""
+          )}
+          {messages.map((message, index) => {
+            if (message.isMine) {
+              return (
+                <div key={index} className="message-row message-row-own justify-end">
+                  <div className="message-row__content">
+                    <div className="message-row__info flex mb-1 items-end justify-end">
+                      <span className="message-row__time opacity-75 text-sm">
+                        {message.createAt}
+                      </span>
+                      <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
+                        {message.text}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            } else {
+              return (
+                <div key={index} className="message-row w-full flex mb-6">
+                  <Image
+                    src={"/images/example.jpeg"}
+                    alt=""
+                    width={50}
+                    height={50}
+                    className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                  />
+                  <div className="message-row__content">
+                    <span className="message-row__author">나는 고양이</span>
+                    <div className="message-row__info flex mb-1 items-end">
+                      <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
+                        {message.text}
+                      </span>
+                      <span className="message-row__time opacity-75 text-sm">
+                        {message.createAt}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+          })}
         </div>
-        {messages.map((message, index) => {
-          if (message.isMine) {
-            return (
-              <div key={index} className="message-row message-row-own justify-end">
-                <div className="message-row__content">
-                  <div className="message-row__info flex mb-1 items-end justify-end">
-                    <span className="message-row__time opacity-75 text-sm">{message.currTime}</span>
-                    <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
-                      {message.text}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          } else {
-            return (
-              <div key={index} className="message-row w-full flex mb-6">
-                <Image
-                  src={"/images/example.jpeg"}
-                  alt=""
-                  width={50}
-                  height={50}
-                  className="object-cover w-12 h-12 rounded-lg mr-2.5"
-                />
-                <div className="message-row__content">
-                  <span className="message-row__author">나는 고양이</span>
-                  <div className="message-row__info flex mb-1 items-end">
-                    <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
-                      {message.text}
-                    </span>
-                    <span className="message-row__time opacity-75 text-sm">{message.currTime}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          }
-        })}
       </main>
       <form
         onSubmit={handleSubmit}

@@ -2,12 +2,8 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import axios from "axios";
+import { User } from "../component/types";
 
-export type User = {
-  id: string;
-  password: string;
-  name: string;
-};
 export default function SignUp() {
   const nameRef = useRef<HTMLInputElement>(null);
   const idRef = useRef<HTMLInputElement>(null);
@@ -167,7 +163,7 @@ export default function SignUp() {
               className="block border border-grey-light w-full p-3 rounded mb-3"
               name="password"
               placeholder="Password"
-              minLength={8}
+              minLength={4}
               maxLength={20}
               ref={pwdRef}
             />
@@ -184,7 +180,7 @@ export default function SignUp() {
               className="block border border-grey-light w-full p-3 rounded mb-3"
               name="confirm_password"
               placeholder="Confirm Password"
-              minLength={8}
+              minLength={4}
               maxLength={20}
               ref={confirmPwdRef}
               onChange={passwordCheck}

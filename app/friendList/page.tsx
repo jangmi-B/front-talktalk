@@ -1,8 +1,82 @@
 "use client";
 import Image from "next/image";
 import BottomNav from "../component/bottomNav";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { ChatMemberInput, UserInfo } from "../component/types";
+import { useCookies } from "react-cookie";
 
 export default function FriendList() {
+  const [members, setMembers] = useState<UserInfo[]>([]);
+  const [cookies] = useCookies(["Authentication"]);
+  const authenticationCookie = cookies["Authentication"];
+  const [user, setUser] = useState<UserInfo>({} as UserInfo);
+
+  useEffect(() => {
+    const getAllMemver = async () => {
+      try {
+        const response = await axios.post("/api/chat/allMember");
+        console.log(response.data);
+        if (response.data) {
+          setMembers(response.data);
+        }
+      } catch (error) {
+        alert("채팅가능한 멤버가 없습니다.");
+      }
+    };
+    getAllMemver();
+  }, []);
+
+  useEffect(() => {
+    // 쿠키가져오기 나중에 따로빼기
+    if (authenticationCookie && authenticationCookie.accessToken) {
+      const getCookies = async () => {
+        try {
+          const token = `Bearer ${authenticationCookie.accessToken}`;
+          const response = await axios.post("/api/check", null, {
+            headers: {
+              Authorization: token,
+            },
+          });
+          console.log(response);
+          setUser(response.data);
+        } catch (error) {
+          alert("friendList쿠키 " + error);
+        }
+      };
+      getCookies();
+    }
+  }, [cookies]);
+
+  const makeRoom = async (chatRoomName: string) => {
+    try {
+      const response = await axios.post(`/api/chat/makeRoom/`, { roomTitle: chatRoomName });
+      return response.data;
+    } catch (error) {
+      alert(error);
+    }
+  };
+
+  const makeChatRoom = async (friendIdx: number) => {
+    const userInput = prompt("채팅방 이름을 입력하세요 :) ");
+    const chatRoomName = userInput ? userInput : `chat_${user.userIdx}`;
+    const roomIdx = await makeRoom(chatRoomName); // makeRoom() 함수 호출과 반환값 대기
+    const chatmemberData: ChatMemberInput = {
+      friendIdx: friendIdx,
+      userIdx: user.userIdx,
+      roomIdx: roomIdx, // 반환된 roomIdx 값을 할당
+    };
+
+    try {
+      const response = await axios.post("/api/chat/chatMember", chatmemberData);
+      if (response.data) {
+        console.log(response.data);
+      }
+    } catch (error) {
+      alert(error);
+    }
+  };
+
   return (
     <>
       <header className="screen-header flex justify-between px-6 items-center my-4">
@@ -24,68 +98,44 @@ export default function FriendList() {
       </header>
 
       <div className="my-2 bg-gray-100 h-[3px]"></div>
-      <div className="main-ontents  h-[600px]">
+      <div className="main-ontents  h-[650px] overflow-scroll">
         <ul role="list" className="mx-auto max-w-md bg-white p-2 ">
-          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow mb-2">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <Image
-                  src={"/images/example.jpeg"}
-                  width={50}
-                  height={50}
-                  alt=""
-                  className="rounded-full"
-                />
-              </div>
-              <div className="w-full text-sm leading-6 flex items-center justify-between">
-                <a href="#" className="font-semibold text-slate-900">
-                  <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
-                  나는 고양이
-                </a>
-              </div>
-            </div>
-            <a
-              href="#"
-              className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
+          {members.map((member) => (
+            <li
+              key={member.id}
+              className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow mb-2"
             >
-              <span className="font-semibold transition group-hover/edit:text-gray-700">Go</span>
-              <svg
-                className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              ></svg>
-            </a>
-          </li>
-          <li className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <Image
-                  src={"/images/angry.jpg"}
-                  width={50}
-                  height={50}
-                  alt=""
-                  className="rounded-full"
-                />
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <Image
+                    src={"/images/example.jpeg"}
+                    width={50}
+                    height={50}
+                    alt=""
+                    className="rounded-full"
+                  />
+                </div>
+                <div className="w-full text-sm leading-6 flex items-center justify-between">
+                  <a className="font-semibold text-slate-900">
+                    <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
+                    {member.name}
+                    <div className="text-slate-400">ID : {member.id}</div>
+                  </a>
+                </div>
               </div>
-              <div className="w-full text-sm leading-6 flex items-center justify-between">
-                <a href="#" className="font-semibold text-slate-900">
-                  <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
-                  나는 화난 고양이
-                </a>
-              </div>
-            </div>
-            <a
-              href="#"
-              className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
-            >
-              <span className="font-semibold transition group-hover/edit:text-gray-700">Go</span>
-              <svg
-                className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              ></svg>
-            </a>
-          </li>
+              <a
+                onClick={() => makeChatRoom(member.userIdx)}
+                className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
+              >
+                <span className="font-semibold transition group-hover/edit:text-gray-700">Go</span>
+                <svg
+                  className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                ></svg>
+              </a>
+            </li>
+          ))}
         </ul>
       </div>
       <BottomNav />
