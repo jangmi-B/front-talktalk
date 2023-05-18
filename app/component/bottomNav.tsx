@@ -1,9 +1,11 @@
 "use client";
 import axios from "axios";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { FaEllipsisH, FaRegComment, FaRegUser } from "react-icons/fa";
+import { AuthContext, AuthContextType } from "./authContext";
 
 export default function BottomNav() {
+  const authContext = useContext<AuthContextType>(AuthContext);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -11,15 +13,7 @@ export default function BottomNav() {
 
   const logOut = () => {
     if (window.confirm("로그아웃 하시곘습니까?")) {
-      axios
-        .post("/api/logOut")
-        .then((response) => {
-          console.log(response);
-          window.location.replace("/");
-        })
-        .catch((error) => {
-          alert("아이디 또는 비밀번호를 확인해주세요.");
-        });
+      authContext.logout();
     }
   };
 

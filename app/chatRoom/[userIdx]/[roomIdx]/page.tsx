@@ -5,10 +5,11 @@ import { FaBars } from "react-icons/fa";
 import { FaRegPlusSquare } from "react-icons/fa";
 import { FaArrowUp } from "react-icons/fa";
 import { FaSignOutAlt } from "react-icons/fa";
-import { useState, useEffect, FormEvent, useRef } from "react";
+import { useState, useEffect, FormEvent, useRef, useContext, MouseEventHandler } from "react";
 import * as mqtt from "mqtt";
 import axios from "axios";
-import { publishedMessage } from "../../../component/types";
+import { ChatRoom, UserInfo, publishedMessage } from "../../../component/types";
+import { usePathname, useRouter } from "next/navigation";
 
 const getDay = () => {
   const today = new Date();
@@ -52,27 +53,58 @@ export default function chatRoom() {
 
   const [chatList, setChatList] = useState<publishedMessage[]>([]);
   const [userIdx, setUserIdx] = useState(0);
+  const [userInfo, setUserInfo] = useState<UserInfo[]>([]);
+  const [allUserInfo, setAllUserInfo] = useState<UserInfo[]>([]);
 
-  const getChatList = async (userIdx: number, roomIdx: number) => {
+  // 접근권한 나중에하기!!!!!
+  // next-router대신 이거쓰기
+  const router = useRouter();
+  const pathname = usePathname();
+  const pathUserIdx = parseInt(pathname.split("/")[2]);
+  const pathRoomIdx = parseInt(pathname.split("/")[3]);
+
+  const roomInfo = userInfo.find((user) => user.room?.roomIdx === pathRoomIdx);
+
+  useEffect(() => {
+    const getAllMember = async () => {
+      try {
+        const response = await axios.post("/api/chat/allMember");
+        if (response.data) {
+          setAllUserInfo(response.data);
+        }
+      } catch (error) {
+        console.log("getAllMember", error);
+      }
+    };
+    getAllMember();
+  }, [userInfo, allUserInfo]);
+
+  const getRoomMemberList = async () => {
     const data = {
-      userIdx: userIdx,
-      roomIdx: roomIdx,
+      userIdx: pathUserIdx,
+      roomIdx: pathRoomIdx,
     };
     try {
-      const response = await axios.post(`/api/chat/list/`, data);
-      console.log(response.data);
-      if (response.data) {
-        setChatList(response.data);
+      const response = await axios.post(`/api/chat/roomMember/`, data);
+      const isMyIdxIncluded = response.data.includes(pathUserIdx);
+      if (!isMyIdxIncluded) {
+        alert("채팅방이 존재하지 않습니다.");
+        window.location.replace("/chatList");
       }
+      const roomInfo = {
+        roomIdx: pathRoomIdx,
+        users: response.data,
+      };
+      const users = await axios.post(`/api/chat/memberInfo/`, roomInfo);
+      setUserInfo(users.data);
     } catch (error) {
-      alert("챗리스트에러 " + error);
-    }
-
-    if (chatListRef.current) {
-      const chatListElement = chatListRef.current;
-      chatListElement.scrollTop = chatListElement.scrollHeight;
+      console.log("roomMember " + error);
     }
   };
+
+  useEffect(() => {
+    getRoomMemberList();
+  }, [pathUserIdx, pathRoomIdx]);
 
   useEffect(() => {
     // chatListRef.current이 변경될 때마다 실행됩니다.
@@ -94,6 +126,10 @@ export default function chatRoom() {
   useEffect(() => {
     const userIdx = parseInt(window.location.pathname.split("/")[2], 10);
     const roomIdx = parseInt(window.location.pathname.split("/")[3], 10);
+
+    userInfo.map((member, index) => {
+      console.log("userInfo>>>>>>>", member);
+    });
 
     setUserIdx(userIdx);
     const mqttClient = mqtt.connect("mqtt://localhost:9001");
@@ -119,6 +155,10 @@ export default function chatRoom() {
 
       const parsedMessage = JSON.parse(message.toString());
       const isMine = parsedMessage.clientId === mqttClient.options.clientId; // 클라이언트 식별자와 일치 여부 판별
+      const matchingUser = userInfo.find((user) => user.user?.userIdx === userIdx);
+
+      console.log("......", matchingUser);
+
       const processedMessage: publishedMessage = {
         userIdx: userIdx,
         roomIdx: roomIdx,
@@ -126,6 +166,7 @@ export default function chatRoom() {
         isMine: isMine,
         createAt: getCurrentTime(),
         clientId: mqttClient.options.clientId || "",
+        user: matchingUser,
       };
 
       console.log("Received message:", processedMessage);
@@ -146,16 +187,64 @@ export default function chatRoom() {
       // 컴포넌트 언마운트 시 MQTT 클라이언트 연결 해제
       mqttClient.end();
     };
-  }, []);
+  }, [userInfo]);
+
+  const getChatList = async (userIdx: number, roomIdx: number) => {
+    const data = {
+      userIdx: userIdx,
+      roomIdx: roomIdx,
+    };
+    try {
+      const response = await axios.post(`/api/chat/list/`, data);
+      if (response.data) {
+        setChatList(response.data);
+      }
+    } catch (error) {
+      alert("getChatList " + error);
+    }
+
+    if (chatListRef.current) {
+      const chatListElement = chatListRef.current;
+      chatListElement.scrollTop = chatListElement.scrollHeight;
+    }
+  };
+
+  const deleteMember: MouseEventHandler<HTMLDivElement> = async (event) => {
+    event.preventDefault();
+
+    if (window.confirm("채팅방을 나가시겠습니까?")) {
+      try {
+        const response = await axios.post("/api/chat/deleteMember", {
+          userIdx: pathUserIdx,
+          roomIdx: pathRoomIdx,
+        });
+        console.log(response);
+        window.location.replace("/chatList");
+      } catch (error) {
+        alert(error);
+      }
+    }
+  };
+
+  const addChatRoom = async (userIdx: number) => {
+    if (window.confirm("친구를 초대하시겠습니까?")) {
+      try {
+        const response = await axios.post("/api/chat/roomMemberList", {
+          userIdx: userIdx,
+          roomIdx: pathRoomIdx,
+        });
+        console.log(response);
+        getRoomMemberList();
+      } catch (error) {
+        alert(error);
+      }
+      openSidebar();
+    }
+  };
 
   const saveChat = async (processedMessage: publishedMessage) => {
     try {
       const response = await axios.post(`/api/chat/saveChat/`, processedMessage);
-      if (response.data) {
-        // const roomIdxList = response.data.map((room: ChatMember) => room.roomIdx);
-        // const chatRoomResponse = await axios.get(`/api/chat/getChatList/`, roomIdxList);
-        // setRooms(chatRoomResponse.data);
-      }
     } catch (error) {
       alert(error);
     }
@@ -175,13 +264,6 @@ export default function chatRoom() {
 
       inputRef.current.value = "";
       inputRef.current.focus();
-    }
-  };
-
-  const addFriend = () => {
-    if (window.confirm("친구를 초대하시겠습니까?")) {
-      console.log("초대됨");
-      openSidebar();
     }
   };
 
@@ -207,17 +289,19 @@ export default function chatRoom() {
   return (
     <div id="chat-screen" className="bg-slate-100">
       <header className="alt-header flex p-4 items-center justify-center ">
-        <div className="alt-header__column w-1/3">
+        <div className="alt-header__column w-5">
           <a href="/chatList">
             <FaChevronLeft />
           </a>
         </div>
-        <div className="alt-header__column w-1/3">
-          <h1 className="alt-header__title text-base font-medium text-xl font-semibold">
-            채팅방이름(3)
-          </h1>
+        <div className="alt-header__column flex justify-center flex-grow">
+          {" "}
+          {/* Modified line */}
+          <h3 className="alt-header__title text-base items-center justify-center font-medium text-xl font-semibold">
+            {roomInfo?.room?.roomTitle}({userInfo.length})
+          </h3>
         </div>
-        <div className="alt-header__column ml-auto flex items-center">
+        <div className="alt-header__column ml-auto flex items-center w-5">
           <span className="alt-header__column-icon" onClick={openSidebar}>
             <FaBars />
           </span>
@@ -277,14 +361,18 @@ export default function chatRoom() {
                   )}
                   <div className="message-row w-full flex mt-6 mb-3">
                     <Image
-                      src={"/images/example.jpeg"}
+                      src={
+                        chat.user?.profileImg
+                          ? chat.user?.profileImg
+                          : "/images/upload/basicProfile.png"
+                      }
                       alt=""
                       width={50}
                       height={50}
                       className="object-cover w-12 h-12 rounded-lg mr-2.5"
                     />
                     <div className="message-row__content">
-                      <span className="message-row__author">나는 고양이</span>
+                      <span className="message-row__author">{chat.user?.name}</span>
                       <div className="message-row__info flex mb-1 items-end">
                         <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
                           {chat.text}
@@ -324,14 +412,18 @@ export default function chatRoom() {
               return (
                 <div key={index} className="message-row w-full flex mb-6">
                   <Image
-                    src={"/images/example.jpeg"}
+                    src={
+                      message.user?.user?.profileImg
+                        ? message.user?.user?.profileImg
+                        : "/images/upload/basicProfile.png"
+                    }
                     alt=""
                     width={50}
                     height={50}
                     className="object-cover w-12 h-12 rounded-lg mr-2.5"
                   />
                   <div className="message-row__content">
-                    <span className="message-row__author">나는 고양이</span>
+                    <span className="message-row__author">{message.user?.user?.name}</span>
                     <div className="message-row__info flex mb-1 items-end">
                       <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
                         {message.text}
@@ -371,61 +463,59 @@ export default function chatRoom() {
 
       {/* 사이드바 */}
       <div
-        className={`sidebar fixed top-0 bottom-0 lg:left-0 p-2 w-[300px] overflow-y-auto text-center bg-white ${
+        className={`sidebar fixed top-0 bottom-0 lg:left-0 p-2 w-[300px] h-full overflow-y-auto text-center bg-white ${
           isSidebarOpen ? "hidden" : ""
         }`}
         ref={sidebarRef}
       >
         <div className="text-gray-100 text-xl">
           <div className="p-2.5 mt-1 flex items-center">
-            <h1 className="font-bold text-gray-500 text-[15px] ml-3">대화상대(3)</h1>
+            <h1 className="font-bold text-gray-500 text-[15px] ml-3">
+              대화상대({userInfo.length})
+            </h1>
             <i className="bi bi-x cursor-pointer ml-28 lg:hidden" onClick={toggleSidebar}></i>
           </div>
           <div className="my-2 bg-gray-600 h-[1px]"></div>
         </div>
-        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <Image
-                src={"/images/example.jpeg"}
-                width={50}
-                height={50}
-                alt=""
-                className="rounded-full"
-              />
+        {userInfo.map((user, index) => {
+          return (
+            <div
+              key={index}
+              className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-gray-100 text-white"
+            >
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <Image
+                    src={
+                      user.user?.profileImg
+                        ? user.user?.profileImg
+                        : "/images/upload/basicProfile.png"
+                    }
+                    width={50}
+                    height={50}
+                    alt=""
+                    className="rounded-full"
+                  />
+                </div>
+                <div className="w-full text-sm leading-6 flex items-center justify-center">
+                  <a href="#" className="font-semibold text-gray-500 ">
+                    {user.user?.name}
+                  </a>
+                </div>
+              </div>
             </div>
-            <div className="w-full text-sm leading-6 flex items-center justify-center">
-              <a href="#" className="font-semibold text-gray-500 ">
-                나는 고양이
-              </a>
-            </div>
-          </div>
-        </div>
-        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <Image
-                src={"/images/example.jpeg"}
-                width={50}
-                height={50}
-                alt=""
-                className="rounded-full"
-              />
-            </div>
-            <div className="w-full text-sm leading-6 flex items-center justify-center">
-              <a href="#" className="font-semibold text-gray-500">
-                너도 고양이?!
-              </a>
-            </div>
-          </div>
-        </div>
+          );
+        })}
         <div className="my-2 bg-gray-600 h-[1px]"></div>
-        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
+        <div
+          onClick={deleteMember}
+          className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-gray-100"
+        >
           <span className="text-[15px] ml-4 text-gray-500 font-bold flex items-center justify-center">
             채팅방 나가기 <FaSignOutAlt className="ml-3" />
           </span>
         </div>
-        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-blue-600 text-white">
+        <div className="p-2.5 mt-3 flex items-center rounded-md px-4 duration-300 cursor-pointer hover:bg-gray-100">
           <i className="bi bi-chat-left-text-fill"></i>
           <div className="flex justify-between w-full items-center" onClick={toggleDropdown}>
             <span className="text-[15px] ml-4 text-gray-500 font-bold">멤버 초대하기</span>
@@ -435,54 +525,29 @@ export default function chatRoom() {
           </div>
         </div>
         <div
-          className="text-left text-sm mt-2 w-4/5 mx-auto text-gray-200 font-bold hidden overflow-scroll h-[400px]"
+          className="text-left text-sm mt-2 w-4/5 mx-auto text-gray-200 font-bold hidden overflow-scroll h-[300px]"
           ref={submenuRef}
         >
-          <div className="flex items-center mb-3">
-            <Image
-              src={"/images/angry.jpg"}
-              alt=""
-              width={50}
-              height={50}
-              className="object-cover w-12 h-12 rounded-lg mr-2.5"
-            />
-            <h1
-              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600 text-gray-500 rounded-md mt-1"
-              onClick={addFriend}
-            >
-              사람111111111
-            </h1>
-          </div>
-          <div className="flex items-center mb-3">
-            <Image
-              src={"/images/angry.jpg"}
-              alt=""
-              width={50}
-              height={50}
-              className="object-cover w-12 h-12 rounded-lg mr-2.5"
-            />
-            <h1
-              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600 text-gray-500 rounded-md mt-1"
-              onClick={addFriend}
-            >
-              사람2222222
-            </h1>
-          </div>
-          <div className="flex items-center mb-3">
-            <Image
-              src={"/images/angry.jpg"}
-              alt=""
-              width={50}
-              height={50}
-              className="object-cover w-12 h-12 rounded-lg mr-2.5"
-            />
-            <h1
-              className="cursor-pointer p-2 hover:bg-blue-600 active:bg-blue-600 text-gray-500 rounded-md mt-1"
-              onClick={addFriend}
-            >
-              사람33333
-            </h1>
-          </div>
+          {allUserInfo.map((user, index) => {
+            return (
+              <div
+                key={index}
+                className="flex items-center mb-3"
+                onClick={() => addChatRoom(user.userIdx)}
+              >
+                <Image
+                  src={user.profileImg ? user.profileImg : "/images/upload/basicProfile.png"}
+                  alt=""
+                  width={50}
+                  height={50}
+                  className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                />
+                <h1 className="cursor-pointer p-2 hover:bg-gray-100 active:bg-gray-100 text-gray-500 rounded-md mt-1">
+                  {user.name}
+                </h1>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

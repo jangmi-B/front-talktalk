@@ -1,4 +1,5 @@
 import Header from "./component/Header";
+import { AuthContextProvider } from "./component/authContext";
 import "./globals.css";
 import { Inter } from "next/font/google";
 
@@ -14,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body className={inter.className}>
         <Header />
-        {children}
+        <AuthContextProvider>{children}</AuthContextProvider>
       </body>
     </html>
   );

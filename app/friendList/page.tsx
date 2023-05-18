@@ -1,31 +1,21 @@
 "use client";
 import Image from "next/image";
 import BottomNav from "../component/bottomNav";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { ChatMemberInput, UserInfo } from "../component/types";
+import { AuthContext, AuthContextType } from "../component/authContext";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCookies } from "react-cookie";
 
 export default function FriendList() {
+  const authContext = useContext<AuthContextType>(AuthContext);
   const [members, setMembers] = useState<UserInfo[]>([]);
   const [cookies] = useCookies(["Authentication"]);
   const authenticationCookie = cookies["Authentication"];
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
-
-  useEffect(() => {
-    const getAllMemver = async () => {
-      try {
-        const response = await axios.post("/api/chat/allMember");
-        console.log(response.data);
-        if (response.data) {
-          setMembers(response.data);
-        }
-      } catch (error) {
-        alert("채팅가능한 멤버가 없습니다.");
-      }
-    };
-    getAllMemver();
-  }, []);
+  const router = useRouter();
 
   useEffect(() => {
     // 쿠키가져오기 나중에 따로빼기
@@ -45,8 +35,29 @@ export default function FriendList() {
         }
       };
       getCookies();
+    } else {
+      // alert("로그인 정보가 없습니다. 로그인 페이지로 돌아갑니다.");
+      router.push("/");
     }
   }, [cookies]);
+
+  useEffect(() => {
+    const getAllMember = async () => {
+      try {
+        const response = await axios.post("/api/chat/allMember");
+        console.log(response.data);
+        if (response.data) {
+          setMembers(response.data);
+        }
+      } catch (error) {
+        alert("채팅가능한 멤버가 없습니다.");
+      }
+    };
+    if (Object.keys(user).length > 0) {
+      console.log(user);
+      getAllMember();
+    }
+  }, [user]);
 
   const makeRoom = async (chatRoomName: string) => {
     try {
@@ -101,40 +112,95 @@ export default function FriendList() {
       <div className="main-ontents  h-[650px] overflow-scroll">
         <ul role="list" className="mx-auto max-w-md bg-white p-2 ">
           {members.map((member) => (
-            <li
-              key={member.id}
-              className="group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow mb-2"
-            >
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <Image
-                    src={"/images/example.jpeg"}
-                    width={50}
-                    height={50}
-                    alt=""
-                    className="rounded-full"
-                  />
-                </div>
-                <div className="w-full text-sm leading-6 flex items-center justify-between">
-                  <a className="font-semibold text-slate-900">
-                    <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
-                    {member.name}
-                    <div className="text-slate-400">ID : {member.id}</div>
+            <div key={member.userIdx}>
+              {user && member.userIdx === user.userIdx ? (
+                <li
+                  key={member.userIdx}
+                  className="bg-gray-100 group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow mb-2"
+                >
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <Image
+                        src={"/images/example.jpeg"}
+                        width={50}
+                        height={50}
+                        alt=""
+                        className="rounded-full"
+                      />
+                    </div>
+                    <div className="w-full text-sm leading-6 flex items-center justify-between">
+                      <a className="font-semibold text-slate-900">
+                        <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
+                        {member.name} <span> : 나</span>
+                      </a>
+                    </div>
+                  </div>
+                  <Link
+                    href={"myPage"}
+                    className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
+                  >
+                    <span className="font-semibold transition group-hover/edit:text-gray-700">
+                      MyPage
+                    </span>
+                    <svg
+                      className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    ></svg>
+                  </Link>
+                </li>
+              ) : (
+                ""
+              )}
+            </div>
+          ))}
+        </ul>
+        <span className="text-slate-600 mx-3 text-xs"> 친구 ({members.length})</span>
+        <div className="my-1 bg-gray-100 h-[1px]"></div>
+        <ul role="list" className="mx-auto max-w-md bg-white p-2 ">
+          {members.map((member) => (
+            <div key={member.userIdx}>
+              {member && member.userIdx !== user.userIdx ? (
+                <li
+                  key={member.id}
+                  className=" group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow mb-2"
+                >
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <Image
+                        src={"/images/example.jpeg"}
+                        width={50}
+                        height={50}
+                        alt=""
+                        className="rounded-full"
+                      />
+                    </div>
+                    <div className="w-full text-sm leading-6 flex items-center justify-between">
+                      <a className="font-semibold text-slate-900">
+                        <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
+                        {member.name}
+                        <div className="text-slate-400">ID : {member.id}</div>
+                      </a>
+                    </div>
+                  </div>
+                  <a
+                    onClick={() => makeChatRoom(member.userIdx)}
+                    className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
+                  >
+                    <span className="font-semibold transition group-hover/edit:text-gray-700">
+                      Go
+                    </span>
+                    <svg
+                      className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    ></svg>
                   </a>
-                </div>
-              </div>
-              <a
-                onClick={() => makeChatRoom(member.userIdx)}
-                className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
-              >
-                <span className="font-semibold transition group-hover/edit:text-gray-700">Go</span>
-                <svg
-                  className="mt-px h-5 w-5 text-slate-400 transition group-hover/edit:translate-x-0.5 group-hover/edit:text-slate-500"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                ></svg>
-              </a>
-            </li>
+                </li>
+              ) : (
+                ""
+              )}
+            </div>
           ))}
         </ul>
       </div>

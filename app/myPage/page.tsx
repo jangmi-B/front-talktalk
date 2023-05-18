@@ -1,10 +1,14 @@
 "use client";
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useContext, useEffect, useRef, useState } from "react";
 import { FaRegUser } from "react-icons/fa";
 import { FaRegComment } from "react-icons/fa";
 import { FaEllipsisH } from "react-icons/fa";
 import Image from "next/image";
 import BottomNav from "../component/bottomNav";
+import { useCookies } from "react-cookie";
+import axios from "axios";
+import { User, UserInfo } from "../component/types";
+import { AuthContext, AuthContextType } from "../component/authContext";
 
 export default function chatList() {
   const [profileImg, setProfileImg] = useState<File>();
@@ -13,6 +17,26 @@ export default function chatList() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
 
+  const [nameValid, setNameValid] = useState<string>("");
+  const [pwdValid, setPwdValid] = useState<string>("");
+  const [confirmPwdValid, setConfirmPwdValid] = useState<string>("");
+
+  const authContext = useContext<AuthContextType>(AuthContext);
+  const [user, setUser] = useState<UserInfo>({} as UserInfo);
+
+  useEffect(() => {
+    authContext
+      .getAuthUser()
+      .then((userData) => {
+        if (userData) {
+          setUser(userData);
+        }
+      })
+      .catch((error) => {
+        console.log("Error fetching user:", error);
+      });
+  }, []);
+
   // https://falsy.me/nextjs-api-routes%EB%A5%BC-%ED%86%B5%ED%95%B4-api-%EC%84%9C%EB%B2%84%EB%A1%9C-%ED%8C%8C%EC%9D%BC-%EB%B3%B4%EB%82%B4%EA%B8%B0/
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -20,14 +44,53 @@ export default function chatList() {
     const formData = new FormData();
     const nameValue = nameRef.current?.value!;
     const pwdValue = passwordRef.current?.value!;
+    const confirmPwdValue = confirmPasswordRef.current?.value!;
+
+    if (!nameValue) {
+      setNameValid("error");
+      nameRef.current?.focus();
+      return false;
+    } else {
+      setNameValid("");
+    }
+
+    if (!pwdValue) {
+      setPwdValid("error");
+      passwordRef.current?.focus();
+      return false;
+    } else {
+      setPwdValid("");
+    }
+
+    if (!confirmPwdValue) {
+      setConfirmPwdValid("emptyError");
+      confirmPasswordRef.current?.focus();
+      return false;
+    } else {
+      setConfirmPwdValid("");
+    }
+
+    if (pwdValue !== confirmPwdValue) {
+      setConfirmPwdValid("notMatch");
+      confirmPasswordRef.current?.focus();
+      return false;
+    }
+
+    const userInfo: User = {
+      id: user.id,
+      password: pwdValue,
+      name: nameValue,
+    };
 
     if (profileImg) {
       formData.append("profileImg", profileImg);
     }
+    formData.append("id", user.id);
     formData.append("name", nameValue);
     formData.append("password", pwdValue);
 
     console.log(formData.get("profileImg"));
+    console.log(formData.get("id"));
     console.log(formData.get("name"));
     console.log(formData.get("password"));
 
@@ -95,10 +158,9 @@ export default function chatList() {
             <div className="shrink-0">
               <Image
                 className="h-16 w-16 object-cover rounded-full"
-                src={image}
+                src={!user.profileImg ? image : user.profileImg}
                 width={50}
                 height={50}
-                // src="https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1361&q=80"
                 alt="Current profile photo"
               />
             </div>
@@ -116,6 +178,8 @@ export default function chatList() {
             <label className="block">
               <span className="block text-sm font-medium mb-3 text-slate-700">Your ID</span>
               <input
+                type="text"
+                defaultValue={user.id || ""}
                 readOnly
                 className="p-6 border-slate-300 border bg-slate-100 mb-3 rounded-md h-10 w-full placeholder-slate-400 contrast-more:border-slate-400 contrast-more:placeholder-slate-500"
               />
@@ -123,10 +187,19 @@ export default function chatList() {
             <label className="block">
               <span className="block text-sm font-medium mb-3 text-slate-700">Your Name</span>
               <input
+                type="text"
+                defaultValue={user.name || ""}
                 ref={nameRef}
                 className="p-6 border-slate-300 border mb-3 rounded-md h-10 w-full placeholder-slate-400 contrast-more:border-slate-400 contrast-more:placeholder-slate-500"
               />
             </label>
+            {nameValid !== "error" ? (
+              ""
+            ) : (
+              <div className="bg-white px-2 text-black w-full mb-2 text-rose-600 text-sm">
+                <p>이름을 입력하세요</p>
+              </div>
+            )}
             <label className="block">
               <span className="block text-sm font-medium mb-3 text-slate-700">Your Password</span>
               <input

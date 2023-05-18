@@ -1,17 +1,22 @@
 "use client";
 import Image from "next/image";
 import BottomNav from "../component/bottomNav";
-import { useEffect, useState } from "react";
-import { ChatMember, ChatRoom, UserInfo } from "../component/types";
+import { useContext, useEffect, useState } from "react";
+import { ChatRoom, UserInfo } from "../component/types";
 import axios from "axios";
-import { useCookies } from "react-cookie";
 import Link from "next/link";
+import { AuthContext, AuthContextType } from "../component/authContext";
+import { useCookies } from "react-cookie";
+import { useRouter } from "next/navigation";
 
 export default function chatList() {
-  const [cookies] = useCookies(["Authentication"]);
-  const authenticationCookie = cookies["Authentication"];
+  const authContext = useContext<AuthContextType>(AuthContext);
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const router = useRouter();
+
+  const [cookies, removeCookie] = useCookies(["Authentication"]);
+  const authenticationCookie = cookies["Authentication"];
 
   const getChatRooms = async () => {
     try {
@@ -29,7 +34,6 @@ export default function chatList() {
 
   useEffect(() => {
     // 쿠키가져오기 나중에 따로빼기
-    console.log(authenticationCookie);
     if (authenticationCookie && authenticationCookie.accessToken) {
       const getCookies = async () => {
         try {
@@ -41,10 +45,13 @@ export default function chatList() {
           });
           setUser(response.data);
         } catch (error) {
-          alert("chatList쿠키 " + error);
+          alert("chatLsit쿠키 " + error);
         }
       };
       getCookies();
+    } else {
+      // alert(" chatLsit쿠키 로그인 정보가 없습니다. 로그인 페이지로 돌아갑니다.");
+      router.push("/");
     }
   }, [cookies]);
 

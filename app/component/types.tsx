@@ -9,6 +9,9 @@ export type UserInfo = {
   id: string;
   password: string;
   name: string;
+  profileImg?: string;
+  room?: ChatRoom;
+  user?: UserInfo;
 };
 
 export type ChatMemberInput = {
@@ -37,4 +40,5 @@ export type publishedMessage = {
   isMine: boolean;
   createAt: string;
   clientId: string;
+  user?: UserInfo;
 };
