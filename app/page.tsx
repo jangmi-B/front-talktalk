@@ -1,8 +1,7 @@
 "use client";
 import axios from "axios";
 import Image from "next/image";
-import { useEffect, useRef } from "react";
-import { useCookies } from "react-cookie";
+import { useRef } from "react";
 
 export default function Login() {
   const idRef = useRef<HTMLInputElement>(null);
@@ -17,12 +16,10 @@ export default function Login() {
       id: idValue,
       password: pwdValue,
     };
-    console.log(userInfo);
 
     axios
       .post("/api/logIn", userInfo)
       .then((response) => {
-        console.log(response);
         window.location.replace("/chatList");
       })
       .catch((error) => {

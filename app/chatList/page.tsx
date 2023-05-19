@@ -2,7 +2,7 @@
 import Image from "next/image";
 import BottomNav from "../component/bottomNav";
 import { useContext, useEffect, useState } from "react";
-import { ChatRoom, UserInfo } from "../component/types";
+import { ChatRoom, User, UserInfo } from "../component/types";
 import axios from "axios";
 import Link from "next/link";
 import { AuthContext, AuthContextType } from "../component/authContext";
@@ -20,7 +20,6 @@ export default function chatList() {
 
   const getChatRooms = async () => {
     try {
-      console.log(user.userIdx);
       const response = await axios.get(`/api/chat/getRoomIdxList/${user.userIdx}`);
       console.log(response.data);
       if (response.data) {
@@ -100,7 +99,7 @@ export default function chatList() {
               <div className="flex gap-4">
                 <div className="flex-shrink-0">
                   <Image
-                    src={"/images/example.jpeg"}
+                    src={room.user?.profileImg ? room.user?.profileImg : "/images/basicProfile.png"}
                     width={50}
                     height={50}
                     alt=""
@@ -111,7 +110,7 @@ export default function chatList() {
                   <div className="w-full text-sm leading-6">
                     <span className="absolute inset-0 rounded-xl" aria-hidden="true"></span>
                     {room.roomTitle}
-                    <div className="text-slate-500">여기에 뭘 담아야하지</div>
+                    <div className="text-slate-500">{room.chat?.text}</div>
                   </div>
                 </Link>
               </div>

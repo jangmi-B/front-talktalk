@@ -28,7 +28,6 @@ export default function FriendList() {
               Authorization: token,
             },
           });
-          console.log(response);
           setUser(response.data);
         } catch (error) {
           alert("friendList쿠키 " + error);
@@ -45,7 +44,6 @@ export default function FriendList() {
     const getAllMember = async () => {
       try {
         const response = await axios.post("/api/chat/allMember");
-        console.log(response.data);
         if (response.data) {
           setMembers(response.data);
         }
@@ -54,7 +52,6 @@ export default function FriendList() {
       }
     };
     if (Object.keys(user).length > 0) {
-      console.log(user);
       getAllMember();
     }
   }, [user]);
@@ -81,7 +78,7 @@ export default function FriendList() {
     try {
       const response = await axios.post("/api/chat/chatMember", chatmemberData);
       if (response.data) {
-        console.log(response.data);
+        router.push(`/chatRoom/${user.userIdx}/${roomIdx}`);
       }
     } catch (error) {
       alert(error);
@@ -121,7 +118,7 @@ export default function FriendList() {
                   <div className="flex gap-4">
                     <div className="flex-shrink-0">
                       <Image
-                        src={"/images/example.jpeg"}
+                        src={member.profileImg ? member.profileImg : "/images/basicProfile.png"}
                         width={50}
                         height={50}
                         alt=""
@@ -168,7 +165,7 @@ export default function FriendList() {
                   <div className="flex gap-4">
                     <div className="flex-shrink-0">
                       <Image
-                        src={"/images/example.jpeg"}
+                        src={member.profileImg ? member.profileImg : "/images/basicProfile.png"}
                         width={50}
                         height={50}
                         alt=""

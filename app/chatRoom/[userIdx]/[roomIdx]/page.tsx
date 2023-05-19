@@ -124,16 +124,10 @@ export default function chatRoom() {
   }, [messages]);
 
   useEffect(() => {
-    const userIdx = parseInt(window.location.pathname.split("/")[2], 10);
-    const roomIdx = parseInt(window.location.pathname.split("/")[3], 10);
+    setUserIdx(pathUserIdx);
 
-    userInfo.map((member, index) => {
-      console.log("userInfo>>>>>>>", member);
-    });
-
-    setUserIdx(userIdx);
     const mqttClient = mqtt.connect("mqtt://localhost:9001");
-    getChatList(userIdx, roomIdx);
+    getChatList(pathUserIdx, pathRoomIdx);
 
     mqttClient.on("error", (error) => {
       console.log("Can't connect" + error);
@@ -144,7 +138,8 @@ export default function chatRoom() {
     mqttClient.on("connect", () => {
       console.log("연결됨");
       console.log("Connected to MQTT broker");
-      mqttClient.subscribe("chat");
+      // mqttClient.subscribe("chat");
+      mqttClient.subscribe(String(pathRoomIdx));
     });
 
     mqttClient.on("message", (topic, message) => {
@@ -155,13 +150,11 @@ export default function chatRoom() {
 
       const parsedMessage = JSON.parse(message.toString());
       const isMine = parsedMessage.clientId === mqttClient.options.clientId; // 클라이언트 식별자와 일치 여부 판별
-      const matchingUser = userInfo.find((user) => user.user?.userIdx === userIdx);
-
-      console.log("......", matchingUser);
+      const matchingUser = userInfo.find((user) => user.user?.userIdx === parsedMessage.userIdx);
 
       const processedMessage: publishedMessage = {
-        userIdx: userIdx,
-        roomIdx: roomIdx,
+        userIdx: pathUserIdx,
+        roomIdx: pathRoomIdx,
         text: parsedMessage.text,
         isMine: isMine,
         createAt: getCurrentTime(),
@@ -218,7 +211,6 @@ export default function chatRoom() {
           userIdx: pathUserIdx,
           roomIdx: pathRoomIdx,
         });
-        console.log(response);
         window.location.replace("/chatList");
       } catch (error) {
         alert(error);
@@ -233,7 +225,6 @@ export default function chatRoom() {
           userIdx: userIdx,
           roomIdx: pathRoomIdx,
         });
-        console.log(response);
         getRoomMemberList();
       } catch (error) {
         alert(error);
@@ -251,6 +242,7 @@ export default function chatRoom() {
   };
 
   const handleSubmit = (event: FormEvent) => {
+    const pathRoomIdx = parseInt(pathname.split("/")[3]);
     event.preventDefault();
     const input = inputRef.current?.value;
     if (input) {
@@ -259,8 +251,11 @@ export default function chatRoom() {
         text: input,
         isMine: true,
         clientId: client!.options.clientId, // 클라이언트 식별자
+        userIdx: userIdx, //메세지 발신자 구분하기위해 입력
       };
-      client?.publish("chat", JSON.stringify(publishedMessage));
+
+      // client?.publish("chat", JSON.stringify(publishedMessage));
+      client?.publish(String(pathRoomIdx), JSON.stringify(publishedMessage));
 
       inputRef.current.value = "";
       inputRef.current.focus();

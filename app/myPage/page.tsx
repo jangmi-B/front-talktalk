@@ -1,18 +1,16 @@
 "use client";
 import { ChangeEvent, useContext, useEffect, useRef, useState } from "react";
-import { FaRegUser } from "react-icons/fa";
-import { FaRegComment } from "react-icons/fa";
-import { FaEllipsisH } from "react-icons/fa";
 import Image from "next/image";
 import BottomNav from "../component/bottomNav";
-import { useCookies } from "react-cookie";
-import axios from "axios";
-import { User, UserInfo } from "../component/types";
+import { UserInfo } from "../component/types";
 import { AuthContext, AuthContextType } from "../component/authContext";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function chatList() {
   const [profileImg, setProfileImg] = useState<File>();
   const [image, setImage] = useState("/images/upload/basicProfile.png");
+  const profileRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
@@ -23,6 +21,7 @@ export default function chatList() {
 
   const authContext = useContext<AuthContextType>(AuthContext);
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
+  const router = useRouter();
 
   useEffect(() => {
     authContext
@@ -44,6 +43,7 @@ export default function chatList() {
     const formData = new FormData();
     const nameValue = nameRef.current?.value!;
     const pwdValue = passwordRef.current?.value!;
+    const profileValue = profileRef.current?.value!;
     const confirmPwdValue = confirmPasswordRef.current?.value!;
 
     if (!nameValue) {
@@ -76,40 +76,38 @@ export default function chatList() {
       return false;
     }
 
-    const userInfo: User = {
-      id: user.id,
-      password: pwdValue,
-      name: nameValue,
-    };
-
+    // 이미지 파일을 formData에 담아서 서버에 보내기
     if (profileImg) {
       formData.append("profileImg", profileImg);
     }
+    formData.append("originalName", profileValue);
     formData.append("id", user.id);
     formData.append("name", nameValue);
     formData.append("password", pwdValue);
 
-    console.log(formData.get("profileImg"));
-    console.log(formData.get("id"));
-    console.log(formData.get("name"));
-    console.log(formData.get("password"));
-
-    // const res = await fetch("/api/upload", {
-    //   method: "POST",
-    //   body: formData,
-    // });
-    // console.log(res);
+    try {
+      const imageRes = await axios.post("/api/upload/myPage", formData, {
+        // 헤더에 보낼 파일의 타입이 multipart라 말해줘야 한다. 이미지 파일은 크기 때문에 부분으로 나눠서 보내기 때문
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      alert("수정 완료되었습니다. :)");
+      router.push("/friendList");
+      // 반환받은 이미지 URL, 원하는 곳에 사용하면 된다. 나 같은 경우 회원가입 할 때, 회원정보와 같이 한 번에 서버로 보내줬다.
+      // const image_URL = imageRes.data.imageURL;
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // 프로파일 바뀔때마다 수정하기
-  const handleChangeFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const fileList = event.target.files;
-    if (fileList && fileList.length > 0) {
-      const file = fileList[0];
-      console.log(file);
-      setProfileImg(file);
-    }
-  };
+  // const handleChangeFile = (event: ChangeEvent<HTMLInputElement>) => {
+  //   const fileList = event.target.files;
+  //   if (fileList && fileList.length > 0) {
+  //     const file = fileList[0];
+  //     console.log(file);
+  //     setProfileImg(file);
+  //   }
+  // };
 
   // https://velog.io/@cloud_oort/Next.js-%ED%94%84%EB%A1%9C%ED%95%84-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EC%97%85%EB%A1%9C%EB%93%9C
   const handleImage = async (e: any) => {
@@ -127,23 +125,6 @@ export default function chatList() {
         setProfileImg(file);
       }
     };
-
-    // console.log(reader);
-    // console.log(image);
-    // // 이미지 파일을 formData에 담아서 서버에 보내고, 서버는 받은 이미지 파일을 S3에 저장하고 받은 URL 값을 클라이언트로 반환해준다.
-    // const formData = new FormData()
-    // formData.append('image', file)
-    // try {
-    //   //
-    // 	const imageRes = await (/*api 부분은 생략*/).post('/image', formData, {
-    //       // 헤더에 보낼 파일의 타입이 multipart라 말해줘야 한다. 이미지 파일은 크기 때문에 부분으로 나눠서 보내기 때문
-    //     	headers: { "Content-Type": "multipart/form-data" }
-    //     })
-    //     // 반환받은 이미지 URL, 원하는 곳에 사용하면 된다. 나 같은 경우 회원가입 할 때, 회원정보와 같이 한 번에 서버로 보내줬다.
-    //     const image_URL = imageRes.data.imageURL
-    // } catch (e) {
-    // 	console.error(e.response)
-    // }
   };
 
   return (
@@ -166,6 +147,11 @@ export default function chatList() {
             </div>
             <label className="block">
               <span className="sr-only">Choose profile photo</span>
+              <input
+                type="hidden"
+                value={user.profileImg ? user.profileImg : ""}
+                ref={profileRef}
+              />
               <input
                 type="file"
                 className="block w-full text-sm text-slate-500 file:text-sm file:font-semibold file:py-2 file:px-4 file:bg-violet-50 file:text-violet-700 file:rounded-full file:border-0 file:mr-4 hover:file:bg-violet-100"
