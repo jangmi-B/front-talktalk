@@ -1,21 +1,35 @@
 "use client";
 import Image from "next/image";
 import BottomNav from "../component/bottomNav";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { ChatMemberInput, UserInfo } from "../component/types";
-import { AuthContext, AuthContextType } from "../component/authContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCookies } from "react-cookie";
+import Modal from "../component/modal";
 
 export default function FriendList() {
-  const authContext = useContext<AuthContextType>(AuthContext);
   const [members, setMembers] = useState<UserInfo[]>([]);
   const [cookies] = useCookies(["Authentication"]);
   const authenticationCookie = cookies["Authentication"];
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
   const router = useRouter();
+
+  // 프로필사진 모달관련
+  const [showModal, setShowModal] = useState(false);
+  const [modalProps, setModalPorps] = useState({
+    profileImg: "",
+    memberId: "",
+  });
+  const goModal = () => {
+    setShowModal(!showModal);
+  };
+  const clickModal = (profileImg: string, memberId: string) => {
+    console.log("click!!");
+    goModal();
+    setModalPorps({ profileImg, memberId });
+  };
 
   useEffect(() => {
     // 쿠키가져오기 나중에 따로빼기
@@ -67,6 +81,8 @@ export default function FriendList() {
 
   const makeChatRoom = async (friendIdx: number) => {
     const userInput = prompt("채팅방 이름을 입력하세요 :) ");
+    if (userInput == null) return false;
+    console.log("userInput", userInput);
     const chatRoomName = userInput ? userInput : `chat_${user.userIdx}`;
     const roomIdx = await makeRoom(chatRoomName); // makeRoom() 함수 호출과 반환값 대기
     const chatmemberData: ChatMemberInput = {
@@ -115,14 +131,22 @@ export default function FriendList() {
                   key={member.userIdx}
                   className="bg-gray-100 group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow mb-2"
                 >
-                  <div className="flex gap-4">
+                  <div
+                    className="flex gap-4 cursor-pointer"
+                    onClick={() =>
+                      clickModal(
+                        member.profileImg ? member.profileImg : "/images/basicProfile.png",
+                        member.id
+                      )
+                    }
+                  >
                     <div className="flex-shrink-0">
                       <Image
                         src={member.profileImg ? member.profileImg : "/images/basicProfile.png"}
                         width={50}
                         height={50}
                         alt=""
-                        className="rounded-full"
+                        className="rounded-full cursor-pointer"
                       />
                     </div>
                     <div className="w-full text-sm leading-6 flex items-center justify-between">
@@ -134,7 +158,7 @@ export default function FriendList() {
                   </div>
                   <Link
                     href={"myPage"}
-                    className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
+                    className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible cursor: pointer;"
                   >
                     <span className="font-semibold transition group-hover/edit:text-gray-700">
                       MyPage
@@ -152,7 +176,10 @@ export default function FriendList() {
             </div>
           ))}
         </ul>
-        <span className="text-slate-600 mx-3 text-xs"> 친구 ({members.length})</span>
+        <span className="text-slate-600 mx-3 text-xs">
+          {" "}
+          친구 ({members.length === 0 ? members.length : members.length - 1})
+        </span>
         <div className="my-1 bg-gray-100 h-[1px]"></div>
         <ul role="list" className="mx-auto max-w-md bg-white p-2 ">
           {members.map((member) => (
@@ -162,15 +189,25 @@ export default function FriendList() {
                   key={member.id}
                   className=" group/item relative flex items-center justify-between rounded-xl p-4 hover:bg-slate-100 shadow mb-2"
                 >
-                  <div className="flex gap-4">
+                  <div
+                    className="flex gap-4 cursor-pointer"
+                    onClick={() =>
+                      clickModal(
+                        member.profileImg ? member.profileImg : "/images/basicProfile.png",
+                        member.id
+                      )
+                    }
+                  >
                     <div className="flex-shrink-0">
-                      <Image
-                        src={member.profileImg ? member.profileImg : "/images/basicProfile.png"}
-                        width={50}
-                        height={50}
-                        alt=""
-                        className="rounded-full"
-                      />
+                      <div className="flex-shrink-0">
+                        <Image
+                          src={member.profileImg ? member.profileImg : "/images/basicProfile.png"}
+                          width={50}
+                          height={50}
+                          alt=""
+                          className="rounded-full "
+                        />
+                      </div>
                     </div>
                     <div className="w-full text-sm leading-6 flex items-center justify-between">
                       <a className="font-semibold text-slate-900">
@@ -182,9 +219,9 @@ export default function FriendList() {
                   </div>
                   <a
                     onClick={() => makeChatRoom(member.userIdx)}
-                    className="group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
+                    className="cursor-pointer group/edit invisible relative flex items-center whitespace-nowrap rounded-full py-1 pl-4 pr-3 text-sm text-slate-500 transition hover:bg-slate-200 group-hover/item:visible"
                   >
-                    <span className="font-semibold transition group-hover/edit:text-gray-700">
+                    <span className="font-semibold transition group-hover/edit:text-gray-700 ">
                       Go
                     </span>
                     <svg
@@ -201,6 +238,14 @@ export default function FriendList() {
           ))}
         </ul>
       </div>
+      {showModal && (
+        <Modal
+          clickModal={goModal}
+          profileImg={modalProps.profileImg}
+          memberId={modalProps.memberId}
+        />
+      )}
+
       <BottomNav />
     </>
   );

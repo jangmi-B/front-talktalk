@@ -10,6 +10,7 @@ import * as mqtt from "mqtt";
 import axios from "axios";
 import { ChatRoom, UserInfo, publishedMessage } from "../../../component/types";
 import { usePathname, useRouter } from "next/navigation";
+import Modal from "@/app/component/modal";
 
 const getDay = () => {
   const today = new Date();
@@ -55,6 +56,22 @@ export default function chatRoom() {
   const [userIdx, setUserIdx] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo[]>([]);
   const [allUserInfo, setAllUserInfo] = useState<UserInfo[]>([]);
+  const [invitedMember, setInvitedMember] = useState<number[]>([]);
+
+  // 프로필사진 모달관련
+  const [showModal, setShowModal] = useState(false);
+  const [modalProps, setModalPorps] = useState({
+    profileImg: "",
+    memberId: "",
+  });
+  const goModal = () => {
+    setShowModal(!showModal);
+  };
+  const clickModal = (profileImg: string, memberId: string) => {
+    console.log("click!!");
+    goModal();
+    setModalPorps({ profileImg, memberId });
+  };
 
   // 접근권한 나중에하기!!!!!
   // next-router대신 이거쓰기
@@ -77,7 +94,8 @@ export default function chatRoom() {
       }
     };
     getAllMember();
-  }, [userInfo, allUserInfo]);
+    // }, [userInfo, allUserInfo]);
+  }, []);
 
   const getRoomMemberList = async () => {
     const data = {
@@ -87,6 +105,8 @@ export default function chatRoom() {
     try {
       const response = await axios.post(`/api/chat/roomMember/`, data);
       const isMyIdxIncluded = response.data.includes(pathUserIdx);
+      setInvitedMember(response.data);
+
       if (!isMyIdxIncluded) {
         alert("채팅방이 존재하지 않습니다.");
         window.location.replace("/chatList");
@@ -365,6 +385,14 @@ export default function chatRoom() {
                       width={50}
                       height={50}
                       className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                      onClick={() =>
+                        clickModal(
+                          chat.user?.profileImg
+                            ? chat.user?.profileImg
+                            : "/images/basicProfile.png",
+                          chat.user?.id!
+                        )
+                      }
                     />
                     <div className="message-row__content">
                       <span className="message-row__author">{chat.user?.name}</span>
@@ -416,6 +444,14 @@ export default function chatRoom() {
                     width={50}
                     height={50}
                     className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                    onClick={() =>
+                      clickModal(
+                        message.user?.user?.profileImg
+                          ? message.user?.user?.profileImg
+                          : "/images/basicProfile.png",
+                        message.user?.user?.id!
+                      )
+                    }
                   />
                   <div className="message-row__content">
                     <span className="message-row__author">{message.user?.user?.name}</span>
@@ -524,6 +560,9 @@ export default function chatRoom() {
           ref={submenuRef}
         >
           {allUserInfo.map((user, index) => {
+            if (invitedMember.includes(user.userIdx)) {
+              return null;
+            }
             return (
               <div
                 key={index}
@@ -545,6 +584,13 @@ export default function chatRoom() {
           })}
         </div>
       </div>
+      {showModal && (
+        <Modal
+          clickModal={goModal}
+          profileImg={modalProps.profileImg}
+          memberId={modalProps.memberId}
+        />
+      )}
     </div>
   );
 }

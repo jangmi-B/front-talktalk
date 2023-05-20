@@ -74,6 +74,8 @@ export default function chatList() {
       setConfirmPwdValid("notMatch");
       confirmPasswordRef.current?.focus();
       return false;
+    } else {
+      setConfirmPwdValid("");
     }
 
     // 이미지 파일을 formData에 담아서 서버에 보내기
@@ -194,6 +196,13 @@ export default function chatList() {
                 className="p-6 border-slate-300 border mb-3 rounded-md h-10 w-full placeholder-slate-400 contrast-more:border-slate-400 contrast-more:placeholder-slate-500"
               />
             </label>
+            {pwdValid !== "error" ? (
+              ""
+            ) : (
+              <div className="bg-white px-2 text-black w-full mb-2 text-rose-600 text-sm">
+                <p>비밀번호를 입력하세요</p>
+              </div>
+            )}
             <label className="block">
               <span className="block text-sm font-medium mb-3 text-slate-700">
                 Confirm Password
@@ -204,6 +213,17 @@ export default function chatList() {
                 className="p-6 border-slate-300 border mb-3 rounded-md h-10 w-full placeholder-slate-400 contrast-more:border-slate-400 contrast-more:placeholder-slate-500"
               />
             </label>
+            {confirmPwdValid === "emptyError" ? (
+              <div className="bg-white px-2 text-black w-full mb-2 text-rose-600 text-sm">
+                <p>비밀번호를 한번더 입력하세요</p>
+              </div>
+            ) : confirmPwdValid === "notMatch" ? (
+              <div className="bg-white px-2 text-black w-full mb-2 text-rose-600 text-sm">
+                <p>비밀번호가 일치하지 않습니다.</p>
+              </div>
+            ) : (
+              ""
+            )}
             <button
               type="submit"
               className="w-full rounded-md text-center bg-blue-700 py-3 rounded bg-green text-white hover:bg-green-dark focus:outline-none my-1"
