@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCookies } from "react-cookie";
 import Modal from "../component/modal";
+import { Loading } from "../component/loading";
 
 export default function FriendList() {
   const [members, setMembers] = useState<UserInfo[]>([]);
@@ -15,6 +16,7 @@ export default function FriendList() {
   const authenticationCookie = cookies["Authentication"];
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   // 프로필사진 모달관련
   const [showModal, setShowModal] = useState(false);
@@ -61,8 +63,10 @@ export default function FriendList() {
         if (response.data) {
           setMembers(response.data);
         }
+        setLoading(false);
       } catch (error) {
         alert("채팅가능한 멤버가 없습니다.");
+        setLoading(false);
       }
     };
     if (Object.keys(user).length > 0) {
@@ -123,6 +127,7 @@ export default function FriendList() {
 
       <div className="my-2 bg-gray-100 h-[3px]"></div>
       <div className="main-ontents  h-[650px] overflow-scroll">
+        {loading && <Loading />}
         <ul role="list" className="mx-auto max-w-md bg-white p-2 ">
           {members.map((member) => (
             <div key={member.userIdx}>

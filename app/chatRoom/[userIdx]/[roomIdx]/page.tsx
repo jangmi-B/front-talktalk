@@ -5,10 +5,18 @@ import { FaBars } from "react-icons/fa";
 import { FaRegPlusSquare } from "react-icons/fa";
 import { FaArrowUp } from "react-icons/fa";
 import { FaSignOutAlt } from "react-icons/fa";
-import { useState, useEffect, FormEvent, useRef, useContext, MouseEventHandler } from "react";
+import {
+  useState,
+  useEffect,
+  FormEvent,
+  useRef,
+  MouseEventHandler,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import * as mqtt from "mqtt";
 import axios from "axios";
-import { ChatRoom, UserInfo, publishedMessage } from "../../../component/types";
+import { UserInfo, publishedMessage } from "../../../component/types";
 import { usePathname, useRouter } from "next/navigation";
 import Modal from "@/app/component/modal";
 
@@ -48,15 +56,48 @@ export default function chatRoom() {
   const chatDayRef = useRef<HTMLInputElement>(null);
   const isSameDayRef = useRef<HTMLInputElement>(null);
 
+  // mqtt
   const [messages, setMessages] = useState<publishedMessage[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
 
+  // chat 정보
   const [chatList, setChatList] = useState<publishedMessage[]>([]);
   const [userIdx, setUserIdx] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo[]>([]);
   const [allUserInfo, setAllUserInfo] = useState<UserInfo[]>([]);
   const [invitedMember, setInvitedMember] = useState<number[]>([]);
+
+  // 접근권한 나중에하기!!!!!
+  // next-router대신 이거쓰기
+  const router = useRouter();
+  const pathname = usePathname();
+  const pathUserIdx = parseInt(pathname.split("/")[2]);
+  const pathRoomIdx = parseInt(pathname.split("/")[3]);
+
+  // 무한스크롤 테스트
+  const [loading, setLoading] = useState(false);
+  const page = useRef(1);
+
+  const handleScroll = useCallback(() => {
+    const scrollTop = chatListRef.current?.scrollTop;
+    const clientHeight = chatListRef.current?.clientHeight!;
+    const scrollHeight = chatListRef.current?.scrollHeight!;
+
+    if (scrollTop === 0 && !loading && clientHeight < scrollHeight) {
+      page.current = page.current + 1;
+      getChatList(pathUserIdx, pathRoomIdx);
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (chatListRef.current) {
+      chatListRef.current.addEventListener("scroll", handleScroll);
+      return () => {
+        chatListRef.current?.removeEventListener("scroll", handleScroll);
+      };
+    }
+  }, []);
 
   // 프로필사진 모달관련
   const [showModal, setShowModal] = useState(false);
@@ -68,17 +109,9 @@ export default function chatRoom() {
     setShowModal(!showModal);
   };
   const clickModal = (profileImg: string, memberId: string) => {
-    console.log("click!!");
     goModal();
     setModalPorps({ profileImg, memberId });
   };
-
-  // 접근권한 나중에하기!!!!!
-  // next-router대신 이거쓰기
-  const router = useRouter();
-  const pathname = usePathname();
-  const pathUserIdx = parseInt(pathname.split("/")[2]);
-  const pathRoomIdx = parseInt(pathname.split("/")[3]);
 
   const roomInfo = userInfo.find((user) => user.room?.roomIdx === pathRoomIdx);
 
@@ -203,23 +236,43 @@ export default function chatRoom() {
   }, [userInfo]);
 
   const getChatList = async (userIdx: number, roomIdx: number) => {
+    setLoading(true);
+
     const data = {
       userIdx: userIdx,
       roomIdx: roomIdx,
+      page: Number(page.current),
     };
     try {
       const response = await axios.post(`/api/chat/list/`, data);
+
       if (response.data) {
+        const prevScrollTop = chatListRef.current?.scrollTop!;
+        setChatList((preList) => [...response.data, ...preList]);
+
+        /// 추가된 항목 이후에 스크롤 위치 유지
+        if (chatListRef.current) {
+          const chatListElement = chatListRef.current;
+          if (response.data.length >= 50) {
+            setTimeout(() => {
+              chatListElement.scrollTop =
+                prevScrollTop + (chatListElement.scrollHeight - chatListElement.clientHeight);
+            }, 0);
+          }
+        }
+      }
+      if (page.current === 1) {
         setChatList(response.data);
+        if (chatListRef.current) {
+          const chatListElement = chatListRef.current;
+          chatListElement.scrollTop = chatListElement.scrollHeight;
+        }
       }
     } catch (error) {
       alert("getChatList " + error);
     }
 
-    if (chatListRef.current) {
-      const chatListElement = chatListRef.current;
-      chatListElement.scrollTop = chatListElement.scrollHeight;
-    }
+    setLoading(false);
   };
 
   const deleteMember: MouseEventHandler<HTMLDivElement> = async (event) => {
@@ -322,6 +375,7 @@ export default function chatRoom() {
           </span>
         </div>
       </header>
+      {loading && <div className="flex items-center justify-center h-[20px]">Loading...</div>}
       <main
         ref={chatListRef}
         className="main-screen main-chat items-center px-2 h-[660px] overflow-scroll"

@@ -8,11 +8,13 @@ import Link from "next/link";
 import { AuthContext, AuthContextType } from "../component/authContext";
 import { useCookies } from "react-cookie";
 import { useRouter } from "next/navigation";
+import { Loading } from "../component/loading";
 
 export default function chatList() {
   const authContext = useContext<AuthContextType>(AuthContext);
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const [cookies, removeCookie] = useCookies(["Authentication"]);
@@ -26,8 +28,10 @@ export default function chatList() {
         setRooms(response.data);
       } else {
       }
+      setLoading(false);
     } catch (error) {
       alert("챗리스트에러 " + error);
+      setLoading(false);
     }
   };
 
@@ -81,6 +85,7 @@ export default function chatList() {
       </header>
 
       <div className="main-ontents h-[600px]">
+        {loading && <Loading />}
         <ul role="list" className="mx-auto max-w-md bg-white p-2 ">
           {rooms.length !== 0 ? (
             ""
