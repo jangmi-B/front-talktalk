@@ -11,6 +11,8 @@ import Modal from "../component/modal";
 import { Loading } from "../component/loading";
 
 export default function FriendList() {
+  const router = useRouter();
+
   // 쿠키로 사용자 정보 가져오기 위해.. 나중에 수정해야함
   const [cookies] = useCookies(["Authentication"]);
   const authenticationCookie = cookies["Authentication"];
@@ -20,7 +22,6 @@ export default function FriendList() {
   const [members, setMembers] = useState<UserInfo[]>([]);
   // 데이터가 로드되는 동안의 로딩스피너
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   // 프로필사진 모달관련
   const [showModal, setShowModal] = useState(false);
@@ -37,8 +38,8 @@ export default function FriendList() {
     setModalPorps({ profileImg, memberId });
   };
 
+  // 쿠키로 사용자정보 가져오기.. 다시 수정필요한 부분..!!!
   useEffect(() => {
-    // 쿠키로 사용자정보 가져오기.. 나중에 따로빼기
     if (authenticationCookie && authenticationCookie.accessToken) {
       const getCookies = async () => {
         try {
@@ -55,29 +56,34 @@ export default function FriendList() {
       };
       getCookies();
     } else {
-      // alert("로그인 정보가 없습니다. 로그인 페이지로 돌아갑니다.");
       router.push("/");
     }
   }, [cookies]);
 
+  // 모든 유저정보 가져옴
   useEffect(() => {
     const getAllMember = async () => {
       try {
         const response = await axios.post("/api/chat/allMember");
+        // 가져온 정보를 memeber에 set
         if (response.data) {
           setMembers(response.data);
         }
+        // 로딩스피너 제거
         setLoading(false);
       } catch (error) {
         alert("채팅가능한 멤버가 없습니다.");
         setLoading(false);
       }
     };
+
+    // 유저정보가 있을때만 유저를 가져오기 위해서
     if (Object.keys(user).length > 0) {
       getAllMember();
     }
   }, [user]);
 
+  // 채팅룸 생성
   const makeRoom = async (chatRoomName: string) => {
     try {
       const response = await axios.post(`/api/chat/makeRoom/`, { roomTitle: chatRoomName });
@@ -87,6 +93,7 @@ export default function FriendList() {
     }
   };
 
+  // 채팅방을 생성하고, 사용자와 클릭한 친구의 inx를 보내서 chatMember에 추가
   const makeChatRoom = async (friendIdx: number) => {
     const userInput = prompt("채팅방 이름을 입력하세요 :) ");
     // 입력을 취소하면 넘어가지 않게
@@ -101,6 +108,7 @@ export default function FriendList() {
       roomIdx: roomIdx, // 반환된 roomIdx 값을 할당
     };
 
+    // 채팅 멤버테이블에 데이터를 추가하고 만든 채팅방으로 이동
     try {
       const response = await axios.post("/api/chat/chatMember", chatmemberData);
       if (response.data) {

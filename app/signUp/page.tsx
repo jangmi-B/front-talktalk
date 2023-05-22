@@ -39,7 +39,6 @@ export default function SignUp() {
   };
 
   const signUp = async (event: React.FormEvent<HTMLFormElement>) => {
-    console.log("들어오냐");
     event.preventDefault();
 
     const nameValue = nameRef.current?.value || "";

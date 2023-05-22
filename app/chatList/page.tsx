@@ -11,29 +11,15 @@ import { useRouter } from "next/navigation";
 import { Loading } from "../component/loading";
 
 export default function chatList() {
+  const router = useRouter();
+  // 유저정보 가져오기 위한 쿠키 .. 수정필요
   const authContext = useContext<AuthContextType>(AuthContext);
-  // 유저정보 가져오기 위한 쿠키
   const [cookies, removeCookie] = useCookies(["Authentication"]);
   const authenticationCookie = cookies["Authentication"];
 
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
-  const getChatRooms = async () => {
-    try {
-      const response = await axios.get(`/api/chat/getRoomIdxList/${user.userIdx}`);
-      if (response.data) {
-        setRooms(response.data);
-      } else {
-      }
-      setLoading(false);
-    } catch (error) {
-      alert("챗리스트에러 " + error);
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     // 쿠키가져오기 나중에 따로빼기
@@ -58,6 +44,22 @@ export default function chatList() {
     }
   }, [cookies]);
 
+  // 로그인한 사용자의 idx로 참여중인 chatRoom검색, 가장최근 채팅내역과 보낸 사용자까지 검색
+  const getChatRooms = async () => {
+    try {
+      const response = await axios.get(`/api/chat/getRoomIdxList/${user.userIdx}`);
+      if (response.data) {
+        setRooms(response.data);
+      } else {
+      }
+      setLoading(false);
+    } catch (error) {
+      alert("챗리스트에러 " + error);
+      setLoading(false);
+    }
+  };
+
+  // 사용자 정보가 있을때만 채팅룸 검색해옴
   useEffect(() => {
     if (user && user.userIdx) {
       getChatRooms();

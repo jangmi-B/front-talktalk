@@ -20,6 +20,8 @@ import { UserInfo, publishedMessage } from "../../../component/types";
 import { usePathname, useRouter } from "next/navigation";
 import Modal from "@/app/component/modal";
 
+// ***** 접근권한 나중에 추가 해야함 ****
+
 // 채팅할때 날짜랑 시간 포멧 변경하는 함수들
 const getDay = () => {
   const today = new Date();
@@ -31,14 +33,7 @@ const getDay = () => {
   return formattedDate;
 };
 
-const getCurrentTime = () => {
-  const chatTime = new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return chatTime;
-};
-
+//  YYYY년 MM월 dd일
 const getChatDate = (createAt: string) => {
   const chatDate = new Date(createAt).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -46,6 +41,15 @@ const getChatDate = (createAt: string) => {
     day: "numeric",
   });
   return chatDate;
+};
+
+// 오전 HH:mm
+const getCurrentTime = () => {
+  const chatTime = new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return chatTime;
 };
 
 export default function chatRoom() {
@@ -72,7 +76,6 @@ export default function chatRoom() {
   const [allUserInfo, setAllUserInfo] = useState<UserInfo[]>([]);
   const [invitedMember, setInvitedMember] = useState<number[]>([]);
 
-  // 접근권한 나중에하기!!!!!
   // next-router대신 이거쓰기
   const router = useRouter();
   const pathname = usePathname();
@@ -81,8 +84,10 @@ export default function chatRoom() {
 
   // 무한스크롤
   const [loading, setLoading] = useState(false);
+  // 50개씩 추가로 가져오기 위한 페이지
   const page = useRef(1);
 
+  // 스크롤이 가장 위에 갔을때 채팅 리스트 50개 추가로 가져오기
   const handleScroll = useCallback(() => {
     const scrollTop = chatListRef.current?.scrollTop;
     const clientHeight = chatListRef.current?.clientHeight!;
@@ -96,6 +101,7 @@ export default function chatRoom() {
     // }
   }, []);
 
+  // 스크롤 이벤트 추가
   useLayoutEffect(() => {
     if (chatListRef.current) {
       chatListRef.current.addEventListener("scroll", handleScroll);
@@ -137,6 +143,7 @@ export default function chatRoom() {
     setModalPorps({ profileImg, memberId });
   };
 
+  // 사이드바에 초대할 수 있는 멤버들출력
   useEffect(() => {
     const getAllMember = async () => {
       try {
@@ -154,17 +161,19 @@ export default function chatRoom() {
 
   // 채팅방 타이틀 가져오기 위해서
   const roomInfo = userInfo.find((user) => user.room?.roomIdx === pathRoomIdx);
-  // 초대되어있는 멤버들
+  // 참여중인 멤버들 검색
   const getRoomMemberList = async () => {
     const data = {
       userIdx: pathUserIdx,
       roomIdx: pathRoomIdx,
     };
     try {
+      // 현재 참여중인 멤버 idx배열
       const response = await axios.post(`/api/chat/roomMember/`, data);
       const isMyIdxIncluded = response.data.includes(pathUserIdx);
       setInvitedMember(response.data);
 
+      // 내가 속한 채팅방이 아닐경우 list로 이동
       if (!isMyIdxIncluded) {
         alert("채팅방이 존재하지 않습니다.");
         window.location.replace("/chatList");
@@ -173,6 +182,7 @@ export default function chatRoom() {
         roomIdx: pathRoomIdx,
         users: response.data,
       };
+      // 참여중인 멤버의 정보 가져오기
       const users = await axios.post(`/api/chat/memberInfo/`, roomInfo);
       setUserInfo(users.data);
     } catch (error) {
@@ -184,34 +194,41 @@ export default function chatRoom() {
     getRoomMemberList();
   }, [pathUserIdx, pathRoomIdx]);
 
+  // mqtt셋팅
   useEffect(() => {
     setUserIdx(pathUserIdx);
 
+    // 브로커 연결
     const mqttClient = mqtt.connect("mqtt://localhost:9001");
+    // 채팅리스트 가져오기
     getChatList(pathUserIdx, pathRoomIdx);
+
+    // MQTT 클라이언트 이벤트 핸들러 등록
+    mqttClient.on("connect", () => {
+      console.log("연결됨");
+      console.log("Connected to MQTT broker");
+      // roomIdx로 토픽 구독
+      // mqttClient.subscribe("chat");
+      mqttClient.subscribe(String(pathRoomIdx));
+    });
 
     mqttClient.on("error", (error) => {
       console.log("Can't connect" + error);
       mqttClient.end();
     });
 
-    // MQTT 클라이언트 이벤트 핸들러 등록
-    mqttClient.on("connect", () => {
-      console.log("연결됨");
-      console.log("Connected to MQTT broker");
-      // mqttClient.subscribe("chat");
-      mqttClient.subscribe(String(pathRoomIdx));
-    });
-
+    // 메세지 이벤트가 발생했을 때(publish)
     mqttClient.on("message", (topic, message) => {
       console.log("Received message:", message.toString());
       console.log(mqttClient.options.clientId);
       console.log(topic);
       console.log(mqttClient);
 
+      // 받은 메세지를 parse해서 접근가능하게 함
       const parsedMessage = JSON.parse(message.toString());
-      const isMine = parsedMessage.clientId === mqttClient.options.clientId; // 클라이언트 식별자와 일치 여부 판별
-      // 받는사람 프로필 정보 출력
+      // 클라이언트 식별자와 일치 여부 판별 -> 수신자 발신자 체크용
+      const isMine = parsedMessage.clientId === mqttClient.options.clientId;
+      // 받는사람 프로필 정보 출력 -> 프로필이미지랑 이름 보이게 하기 위해서
       const matchingUser = userInfo.find((user) => user.user?.userIdx === parsedMessage.userIdx);
 
       const processedMessage: publishedMessage = {
@@ -225,8 +242,10 @@ export default function chatRoom() {
       };
 
       console.log("Received message:", processedMessage);
+      // 새로 생성된 메세지를 현재 메세지 리스트에 추가함
       setMessages((prevMessages: publishedMessage[]) => [...prevMessages, processedMessage]);
 
+      // 받은사람 보낸사람 구분해서 저장하기, 안하면 중복으로 저장됨
       if (processedMessage.userIdx === userIdx) {
         if (isMine) {
           // 채팅내용 row별로 저장
@@ -246,6 +265,7 @@ export default function chatRoom() {
   }, [userInfo]);
   // }, []);
 
+  // 채팅내용 저장
   const saveChat = async (processedMessage: publishedMessage) => {
     try {
       const response = await axios.post(`/api/chat/saveChat/`, processedMessage);
@@ -254,9 +274,13 @@ export default function chatRoom() {
     }
   };
 
+  // 메세지 보내기 버튼(submit) 눌렀을 때
   const handleSubmit = (event: FormEvent) => {
-    const pathRoomIdx = parseInt(pathname.split("/")[3]);
     event.preventDefault();
+
+    // roomIdx
+    const pathRoomIdx = parseInt(pathname.split("/")[3]);
+    // 입력한 메세지
     const input = inputRef.current?.value;
     if (input) {
       // MQTT 브로커로 메시지 발행
@@ -264,20 +288,25 @@ export default function chatRoom() {
         text: input,
         isMine: true,
         clientId: client!.options.clientId, // 클라이언트 식별자
-        userIdx: userIdx, //메세지 발신자 구분하기위해 입력
+        userIdx: userIdx, //메세지 발신자, 수신자 구분하기위해 추가
       };
 
+      // 구독한 roomIdx로 메세지 발행
       // client?.publish("chat", JSON.stringify(publishedMessage));
       client?.publish(String(pathRoomIdx), JSON.stringify(publishedMessage));
 
+      // 입력하고 input값 비우기
       inputRef.current.value = "";
       inputRef.current.focus();
     }
   };
 
+  // 채팅 리스트 조회
   const getChatList = async (userIdx: number, roomIdx: number) => {
+    // 무한스크롤할때 loading 표시
     setLoading(true);
 
+    // 무한스크롤 하려고 page도 같이보냄
     const data = {
       userIdx: userIdx,
       roomIdx: roomIdx,
@@ -287,35 +316,39 @@ export default function chatRoom() {
       const response = await axios.post(`/api/chat/list/`, data);
 
       if (response.data) {
-        const prevScrollTop = chatListRef.current?.scrollTop!;
-        setChatList((preList) => [...response.data, ...preList]);
-
-        /// 추가된 항목 이후에 스크롤 위치 유지
-        if (chatListRef.current) {
-          const chatListElement = chatListRef.current;
-          if (response.data.length >= 50) {
-            setTimeout(() => {
-              chatListElement.scrollTop =
-                prevScrollTop + (chatListElement.scrollHeight - chatListElement.clientHeight);
-            }, 0);
+        // 맨처음 로드됐을때는 스크롤 제일 바닥
+        if (page.current === 1) {
+          setChatList(response.data);
+          if (chatListRef.current) {
+            const chatListElement = chatListRef.current;
+            chatListElement.scrollTop = chatListElement.scrollHeight;
           }
-        }
-      }
-      // 맨처음 로드됐을때는 스크롤 제일 바닥
-      if (page.current === 1) {
-        setChatList(response.data);
-        if (chatListRef.current) {
-          const chatListElement = chatListRef.current;
-          chatListElement.scrollTop = chatListElement.scrollHeight;
+        } else {
+          // 채팅 div의 스크롤위치
+          const prevScrollTop = chatListRef.current?.scrollTop!;
+          // 가져온 채팅리스트 이전 리스트에 붙이기
+          setChatList((preList) => [...response.data, ...preList]);
+
+          /// 추가된 항목 이후에 스크롤 위치 유지
+          if (chatListRef.current) {
+            const chatListElement = chatListRef.current;
+            if (response.data.length >= 50) {
+              setTimeout(() => {
+                chatListElement.scrollTop =
+                  prevScrollTop + (chatListElement.scrollHeight - chatListElement.clientHeight);
+              }, 0);
+            }
+          }
         }
       }
     } catch (error) {
       alert("getChatList " + error);
     }
-
+    // 출력한 후에는 무한스크롤 로딩없애기
     setLoading(false);
   };
 
+  // 채팅방 나가기
   const deleteMember: MouseEventHandler<HTMLDivElement> = async (event) => {
     event.preventDefault();
 
@@ -325,6 +358,7 @@ export default function chatRoom() {
           userIdx: pathUserIdx,
           roomIdx: pathRoomIdx,
         });
+        // 나간 이후에는 chatList로 돌아가기
         window.location.replace("/chatList");
       } catch (error) {
         alert(error);
@@ -332,19 +366,22 @@ export default function chatRoom() {
     }
   };
 
+  // 채팅방 초대
   const addChatRoom = async (userIdx: number) => {
     if (window.confirm("친구를 초대하시겠습니까?")) {
       try {
-        const response = await axios.post("/api/chat/roomMemberList", {
+        const response = await axios.post("/api/chat/addMember", {
           userIdx: userIdx,
           roomIdx: pathRoomIdx,
         });
+        // 초대한 멤버 토대로 참여중인 멤버와 멤버리스트 초기화
         getRoomMemberList();
-        // getRoomMemberList는 serInfo를 다시 set하면 message가 남아있어서 비우기
+        // getRoomMemberList는 userInfo를 다시 set하면 message가 남아있어서 메세지비우기
         setMessages([]);
       } catch (error) {
         alert(error);
       }
+      // 열린 사이드바 닫기
       openSidebar();
     }
   };

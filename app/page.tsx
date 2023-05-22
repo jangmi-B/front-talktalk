@@ -1,11 +1,21 @@
 "use client";
 import axios from "axios";
+import { GetServerSideProps, GetServerSidePropsContext } from "next";
 import Image from "next/image";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useCookies } from "react-cookie";
 
 export default function Login() {
+  const [cookies] = useCookies(["Authentication"]);
+  const authenticationCookie = cookies["Authentication"];
   const idRef = useRef<HTMLInputElement>(null);
   const pwdRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (authenticationCookie && authenticationCookie.accessToken) {
+      window.location.replace("/chatList");
+    }
+  }, []);
 
   const logIn = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

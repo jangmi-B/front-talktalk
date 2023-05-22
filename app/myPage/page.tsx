@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 
 export default function chatList() {
   const [profileImg, setProfileImg] = useState<File>();
-  const [image, setImage] = useState("/images/upload/basicProfile.png");
+  const [image, setImage] = useState("/images/basicProfile.png");
   const profileRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -112,6 +112,7 @@ export default function chatList() {
   // };
 
   // https://velog.io/@cloud_oort/Next.js-%ED%94%84%EB%A1%9C%ED%95%84-%EC%9D%B4%EB%AF%B8%EC%A7%80-%EC%97%85%EB%A1%9C%EB%93%9C
+  // 사진 이미지를 프로필이미지에 보여지게 하기위해
   const handleImage = async (e: any) => {
     // 내가 받을 파일은 하나기 때문에 index 0값의 이미지를 가짐
     const file = e.target.files[0];
