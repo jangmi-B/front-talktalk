@@ -5,16 +5,19 @@ import axios from "axios";
 import { User } from "../component/types";
 
 export default function SignUp() {
+  // input값
   const nameRef = useRef<HTMLInputElement>(null);
   const idRef = useRef<HTMLInputElement>(null);
   const pwdRef = useRef<HTMLInputElement>(null);
   const confirmPwdRef = useRef<HTMLInputElement>(null);
 
+  // 유효성 에러 체크용
   const [nameValid, setNameValid] = useState<string>("");
   const [idValid, setIdValid] = useState<string>("");
   const [pwdValid, setPwdValid] = useState<string>("");
   const [confirmPwdValid, setConfirmPwdValid] = useState<string>("");
 
+  // 비밀번호 일치 체크
   const passwordCheck = (event: React.ChangeEvent<HTMLInputElement>) => {
     const pwdValue = pwdRef.current?.value || "";
     const confirmValue = confirmPwdRef.current?.value || "";
@@ -96,11 +99,10 @@ export default function SignUp() {
       return false;
     }
 
-    // 유효성 다 통과하면
+    // 유효성 다 통과하면 회원가입 form 전달
     axios
       .post("/api/signUp", userInfo)
       .then((response) => {
-        console.log(response);
         alert("회원가입이 완료되었습니다. 로그인페이지로 이동합니다.");
         window.location.replace("/");
       })

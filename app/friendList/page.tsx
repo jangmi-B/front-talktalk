@@ -11,12 +11,16 @@ import Modal from "../component/modal";
 import { Loading } from "../component/loading";
 
 export default function FriendList() {
-  const [members, setMembers] = useState<UserInfo[]>([]);
+  // 쿠키로 사용자 정보 가져오기 위해.. 나중에 수정해야함
   const [cookies] = useCookies(["Authentication"]);
   const authenticationCookie = cookies["Authentication"];
+  // 가져온 사용자 정보 저장
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
-  const router = useRouter();
+  // 전체 멤버
+  const [members, setMembers] = useState<UserInfo[]>([]);
+  // 데이터가 로드되는 동안의 로딩스피너
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   // 프로필사진 모달관련
   const [showModal, setShowModal] = useState(false);
@@ -34,7 +38,7 @@ export default function FriendList() {
   };
 
   useEffect(() => {
-    // 쿠키가져오기 나중에 따로빼기
+    // 쿠키로 사용자정보 가져오기.. 나중에 따로빼기
     if (authenticationCookie && authenticationCookie.accessToken) {
       const getCookies = async () => {
         try {
@@ -85,10 +89,12 @@ export default function FriendList() {
 
   const makeChatRoom = async (friendIdx: number) => {
     const userInput = prompt("채팅방 이름을 입력하세요 :) ");
+    // 입력을 취소하면 넘어가지 않게
     if (userInput == null) return false;
-    console.log("userInput", userInput);
+    // 빈값으로 가면 임시로 채팅방 이름 만들기
     const chatRoomName = userInput ? userInput : `chat_${user.userIdx}`;
-    const roomIdx = await makeRoom(chatRoomName); // makeRoom() 함수 호출과 반환값 대기
+    const roomIdx = await makeRoom(chatRoomName); // makeRoom() 함수 호출과 반환값 대기(roomIdx)
+
     const chatmemberData: ChatMemberInput = {
       friendIdx: friendIdx,
       userIdx: user.userIdx,

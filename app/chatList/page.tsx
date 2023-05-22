@@ -12,18 +12,18 @@ import { Loading } from "../component/loading";
 
 export default function chatList() {
   const authContext = useContext<AuthContextType>(AuthContext);
+  // 유저정보 가져오기 위한 쿠키
+  const [cookies, removeCookie] = useCookies(["Authentication"]);
+  const authenticationCookie = cookies["Authentication"];
+
   const [user, setUser] = useState<UserInfo>({} as UserInfo);
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const [cookies, removeCookie] = useCookies(["Authentication"]);
-  const authenticationCookie = cookies["Authentication"];
-
   const getChatRooms = async () => {
     try {
       const response = await axios.get(`/api/chat/getRoomIdxList/${user.userIdx}`);
-      console.log(response.data);
       if (response.data) {
         setRooms(response.data);
       } else {

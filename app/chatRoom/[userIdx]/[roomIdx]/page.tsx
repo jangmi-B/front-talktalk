@@ -20,6 +20,7 @@ import { UserInfo, publishedMessage } from "../../../component/types";
 import { usePathname, useRouter } from "next/navigation";
 import Modal from "@/app/component/modal";
 
+// 채팅할때 날짜랑 시간 포멧 변경하는 함수들
 const getDay = () => {
   const today = new Date();
   const year = today.getFullYear();
@@ -48,11 +49,13 @@ const getChatDate = (createAt: string) => {
 };
 
 export default function chatRoom() {
+  //사이드바 관련 변수
   const isSidebarOpen = useRef(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const arrowRef = useRef<HTMLSpanElement>(null);
-  const chatListRef = useRef<HTMLDivElement>(null);
+
+  // 날짜가 달라질때 날짜표시하기위한 변수
   const chatDayRef = useRef<HTMLInputElement>(null);
   const isSameDayRef = useRef<HTMLInputElement>(null);
 
@@ -62,6 +65,7 @@ export default function chatRoom() {
   const [client, setClient] = useState<mqtt.MqttClient | null>(null);
 
   // chat 정보
+  const chatListRef = useRef<HTMLDivElement>(null);
   const [chatList, setChatList] = useState<publishedMessage[]>([]);
   const [userIdx, setUserIdx] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo[]>([]);
@@ -75,7 +79,7 @@ export default function chatRoom() {
   const pathUserIdx = parseInt(pathname.split("/")[2]);
   const pathRoomIdx = parseInt(pathname.split("/")[3]);
 
-  // 무한스크롤 테스트
+  // 무한스크롤
   const [loading, setLoading] = useState(false);
   const page = useRef(1);
 
@@ -84,10 +88,12 @@ export default function chatRoom() {
     const clientHeight = chatListRef.current?.clientHeight!;
     const scrollHeight = chatListRef.current?.scrollHeight!;
 
+    // if (page.current > 1) {
     if (scrollTop === 0 && !loading && clientHeight < scrollHeight) {
       page.current = page.current + 1;
       getChatList(pathUserIdx, pathRoomIdx);
     }
+    // }
   }, []);
 
   useLayoutEffect(() => {
@@ -98,6 +104,24 @@ export default function chatRoom() {
       };
     }
   }, []);
+
+  // 메세지 보낼때마다 스크롤 바닥으로 내리기
+  useEffect(() => {
+    // chatListRef.current이 변경될 때마다 실행됩니다.
+    if (chatListRef.current) {
+      const chatListElement = chatListRef.current;
+      chatListElement.scrollTop = chatListElement.scrollHeight;
+
+      const isScrolledToBottom =
+        chatListElement.scrollHeight - chatListElement.clientHeight <=
+        chatListElement.scrollTop + 1;
+
+      // chatListElement의 스크롤을 맨 아래로 이동시킵니다.
+      if (isScrolledToBottom) {
+        chatListElement.scrollTop = chatListElement.scrollHeight;
+      }
+    }
+  }, [messages]);
 
   // 프로필사진 모달관련
   const [showModal, setShowModal] = useState(false);
@@ -112,8 +136,6 @@ export default function chatRoom() {
     goModal();
     setModalPorps({ profileImg, memberId });
   };
-
-  const roomInfo = userInfo.find((user) => user.room?.roomIdx === pathRoomIdx);
 
   useEffect(() => {
     const getAllMember = async () => {
@@ -130,6 +152,9 @@ export default function chatRoom() {
     // }, [userInfo, allUserInfo]);
   }, []);
 
+  // 채팅방 타이틀 가져오기 위해서
+  const roomInfo = userInfo.find((user) => user.room?.roomIdx === pathRoomIdx);
+  // 초대되어있는 멤버들
   const getRoomMemberList = async () => {
     const data = {
       userIdx: pathUserIdx,
@@ -160,23 +185,6 @@ export default function chatRoom() {
   }, [pathUserIdx, pathRoomIdx]);
 
   useEffect(() => {
-    // chatListRef.current이 변경될 때마다 실행됩니다.
-    if (chatListRef.current) {
-      const chatListElement = chatListRef.current;
-      chatListElement.scrollTop = chatListElement.scrollHeight;
-
-      const isScrolledToBottom =
-        chatListElement.scrollHeight - chatListElement.clientHeight <=
-        chatListElement.scrollTop + 1;
-
-      // chatListElement의 스크롤을 맨 아래로 이동시킵니다.
-      if (isScrolledToBottom) {
-        chatListElement.scrollTop = chatListElement.scrollHeight;
-      }
-    }
-  }, [messages]);
-
-  useEffect(() => {
     setUserIdx(pathUserIdx);
 
     const mqttClient = mqtt.connect("mqtt://localhost:9001");
@@ -203,6 +211,7 @@ export default function chatRoom() {
 
       const parsedMessage = JSON.parse(message.toString());
       const isMine = parsedMessage.clientId === mqttClient.options.clientId; // 클라이언트 식별자와 일치 여부 판별
+      // 받는사람 프로필 정보 출력
       const matchingUser = userInfo.find((user) => user.user?.userIdx === parsedMessage.userIdx);
 
       const processedMessage: publishedMessage = {
@@ -220,6 +229,7 @@ export default function chatRoom() {
 
       if (processedMessage.userIdx === userIdx) {
         if (isMine) {
+          // 채팅내용 row별로 저장
           saveChat(processedMessage);
         }
       } else {
@@ -234,6 +244,36 @@ export default function chatRoom() {
       mqttClient.end();
     };
   }, [userInfo]);
+  // }, []);
+
+  const saveChat = async (processedMessage: publishedMessage) => {
+    try {
+      const response = await axios.post(`/api/chat/saveChat/`, processedMessage);
+    } catch (error) {
+      alert(error);
+    }
+  };
+
+  const handleSubmit = (event: FormEvent) => {
+    const pathRoomIdx = parseInt(pathname.split("/")[3]);
+    event.preventDefault();
+    const input = inputRef.current?.value;
+    if (input) {
+      // MQTT 브로커로 메시지 발행
+      const publishedMessage = {
+        text: input,
+        isMine: true,
+        clientId: client!.options.clientId, // 클라이언트 식별자
+        userIdx: userIdx, //메세지 발신자 구분하기위해 입력
+      };
+
+      // client?.publish("chat", JSON.stringify(publishedMessage));
+      client?.publish(String(pathRoomIdx), JSON.stringify(publishedMessage));
+
+      inputRef.current.value = "";
+      inputRef.current.focus();
+    }
+  };
 
   const getChatList = async (userIdx: number, roomIdx: number) => {
     setLoading(true);
@@ -261,6 +301,7 @@ export default function chatRoom() {
           }
         }
       }
+      // 맨처음 로드됐을때는 스크롤 제일 바닥
       if (page.current === 1) {
         setChatList(response.data);
         if (chatListRef.current) {
@@ -299,6 +340,8 @@ export default function chatRoom() {
           roomIdx: pathRoomIdx,
         });
         getRoomMemberList();
+        // getRoomMemberList는 serInfo를 다시 set하면 message가 남아있어서 비우기
+        setMessages([]);
       } catch (error) {
         alert(error);
       }
@@ -306,35 +349,7 @@ export default function chatRoom() {
     }
   };
 
-  const saveChat = async (processedMessage: publishedMessage) => {
-    try {
-      const response = await axios.post(`/api/chat/saveChat/`, processedMessage);
-    } catch (error) {
-      alert(error);
-    }
-  };
-
-  const handleSubmit = (event: FormEvent) => {
-    const pathRoomIdx = parseInt(pathname.split("/")[3]);
-    event.preventDefault();
-    const input = inputRef.current?.value;
-    if (input) {
-      // MQTT 브로커로 메시지 발행
-      const publishedMessage = {
-        text: input,
-        isMine: true,
-        clientId: client!.options.clientId, // 클라이언트 식별자
-        userIdx: userIdx, //메세지 발신자 구분하기위해 입력
-      };
-
-      // client?.publish("chat", JSON.stringify(publishedMessage));
-      client?.publish(String(pathRoomIdx), JSON.stringify(publishedMessage));
-
-      inputRef.current.value = "";
-      inputRef.current.focus();
-    }
-  };
-
+  // 사이드바를 위한 함수들
   const toggleDropdown = () => {
     const submenu = submenuRef.current;
     const arrow = arrowRef.current;
@@ -378,7 +393,7 @@ export default function chatRoom() {
       {loading && <div className="flex items-center justify-center h-[20px]">Loading...</div>}
       <main
         ref={chatListRef}
-        className="main-screen main-chat items-center px-2 h-[660px] overflow-scroll"
+        className="main-screen main-chat items-center px-2 pb-3 h-[660px] overflow-scroll"
       >
         <input type="hidden" ref={chatDayRef} />
         <input type="hidden" ref={isSameDayRef} />
@@ -411,7 +426,7 @@ export default function chatRoom() {
                   <div className="message-row__content">
                     <div className="message-row__info flex mb-2 items-end justify-end">
                       <span className="message-row__time opacity-75 text-sm">{chatTime}</span>
-                      <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
+                      <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0 max-w-[280px]">
                         {chat.text}
                       </span>
                     </div>
@@ -428,12 +443,11 @@ export default function chatRoom() {
                   ) : (
                     ""
                   )}
+                  {/* <OthersChat chat={chat} /> */}
                   <div className="message-row w-full flex mt-6 mb-3">
                     <Image
                       src={
-                        chat.user?.profileImg
-                          ? chat.user?.profileImg
-                          : "/images/upload/basicProfile.png"
+                        chat.user?.profileImg ? chat.user?.profileImg : "/images/basicProfile.png"
                       }
                       alt=""
                       width={50}
@@ -451,7 +465,7 @@ export default function chatRoom() {
                     <div className="message-row__content">
                       <span className="message-row__author">{chat.user?.name}</span>
                       <div className="message-row__info flex mb-1 items-end">
-                        <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
+                        <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2 max-w-[250px]">
                           {chat.text}
                         </span>
                         <span className="message-row__time opacity-75 text-sm">{chatTime}</span>
@@ -478,7 +492,7 @@ export default function chatRoom() {
                       <span className="message-row__time opacity-75 text-sm">
                         {message.createAt}
                       </span>
-                      <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0">
+                      <span className="message-row__bubble bg-yellow-500 px-4 py-1 rounded-xl text-lg ml-2 mr-0 max-w-[280px]">
                         {message.text}
                       </span>
                     </div>
@@ -487,35 +501,38 @@ export default function chatRoom() {
               );
             } else {
               return (
-                <div key={index} className="message-row w-full flex mb-6">
-                  <Image
-                    src={
-                      message.user?.user?.profileImg
-                        ? message.user?.user?.profileImg
-                        : "/images/upload/basicProfile.png"
-                    }
-                    alt=""
-                    width={50}
-                    height={50}
-                    className="object-cover w-12 h-12 rounded-lg mr-2.5"
-                    onClick={() =>
-                      clickModal(
+                <div key={index}>
+                  {/* <MqttChat message={message} /> */}
+                  <div className="message-row w-full flex mb-6">
+                    <Image
+                      src={
                         message.user?.user?.profileImg
                           ? message.user?.user?.profileImg
-                          : "/images/basicProfile.png",
-                        message.user?.user?.id!
-                      )
-                    }
-                  />
-                  <div className="message-row__content">
-                    <span className="message-row__author">{message.user?.user?.name}</span>
-                    <div className="message-row__info flex mb-1 items-end">
-                      <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2">
-                        {message.text}
-                      </span>
-                      <span className="message-row__time opacity-75 text-sm">
-                        {message.createAt}
-                      </span>
+                          : "/images/basicProfile.png"
+                      }
+                      alt=""
+                      width={50}
+                      height={50}
+                      className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                      onClick={() =>
+                        clickModal(
+                          message.user?.user?.profileImg
+                            ? message.user?.user?.profileImg
+                            : "/images/basicProfile.png",
+                          message.user?.user?.id!
+                        )
+                      }
+                    />
+                    <div className="message-row__content">
+                      <span className="message-row__author">{message.user?.user?.name}</span>
+                      <div className="message-row__info flex mb-1 items-end">
+                        <span className="message-row__bubble bg-white px-4 py-1 rounded-xl text-lg mr-2 max-w-[250px]">
+                          {message.text}
+                        </span>
+                        <span className="message-row__time opacity-75 text-sm">
+                          {message.createAt}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -546,6 +563,17 @@ export default function chatRoom() {
         </div>
       </form>
 
+      {/* <SideBar
+        userInfo={userInfo}
+        allUserInfo={allUserInfo}
+        invitedMember={invitedMember}
+        deleteMember={deleteMember}
+        addChatRoom={addChatRoom}
+        toggleDropdown={toggleDropdown}
+        openSidebar={openSidebar}
+        isSidebarOpen={isSidebarOpen}
+      /> */}
+
       {/* 사이드바 */}
       <div
         className={`sidebar fixed top-0 bottom-0 lg:left-0 p-2 w-[300px] h-full overflow-y-auto text-center bg-white ${
@@ -571,11 +599,7 @@ export default function chatRoom() {
               <div className="flex gap-4">
                 <div className="flex-shrink-0">
                   <Image
-                    src={
-                      user.user?.profileImg
-                        ? user.user?.profileImg
-                        : "/images/upload/basicProfile.png"
-                    }
+                    src={user.user?.profileImg ? user.user?.profileImg : "/images/basicProfile.png"}
                     width={50}
                     height={50}
                     alt=""
@@ -620,17 +644,17 @@ export default function chatRoom() {
             return (
               <div
                 key={index}
-                className="flex items-center mb-3"
+                className="flex items-center mb-3 hover:bg-gray-100 "
                 onClick={() => addChatRoom(user.userIdx)}
               >
                 <Image
-                  src={user.profileImg ? user.profileImg : "/images/upload/basicProfile.png"}
+                  src={user.profileImg ? user.profileImg : "/images/basicProfile.png"}
                   alt=""
                   width={50}
                   height={50}
-                  className="object-cover w-12 h-12 rounded-lg mr-2.5"
+                  className="object-cover w-12 h-12  rounded-full mr-2.5"
                 />
-                <h1 className="cursor-pointer p-2 hover:bg-gray-100 active:bg-gray-100 text-gray-500 rounded-md mt-1">
+                <h1 className="cursor-pointer p-2 active:bg-gray-100 text-gray-500 rounded-md mt-1">
                   {user.name}
                 </h1>
               </div>
