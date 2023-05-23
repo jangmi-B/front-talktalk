@@ -1,8 +1,7 @@
 "use client";
 import axios from "axios";
-import { GetServerSideProps, GetServerSidePropsContext } from "next";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useCookies } from "react-cookie";
 
 export default function Login() {

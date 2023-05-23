@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 
 export default function chatList() {
   const [profileImg, setProfileImg] = useState<File>();
+  const [newProfileImg, setNewProfileImg] = useState("");
   const [image, setImage] = useState("/images/basicProfile.png");
   const profileRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -126,6 +127,7 @@ export default function chatList() {
         const imageURL = e.target?.result as string;
         setImage(imageURL);
         setProfileImg(file);
+        setNewProfileImg(imageURL);
       }
     };
   };
@@ -142,7 +144,8 @@ export default function chatList() {
             <div className="shrink-0">
               <Image
                 className="h-16 w-16 object-cover rounded-full"
-                src={!user.profileImg ? image : user.profileImg}
+                // src={!user.profileImg ? image : user.profileImg}
+                src={!user.profileImg ? image : newProfileImg ? newProfileImg : user.profileImg}
                 width={50}
                 height={50}
                 alt="Current profile photo"
